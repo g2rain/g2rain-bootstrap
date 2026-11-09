@@ -1,0 +1,249 @@
+# Agent：Chat Shell、Agent App、Runtime、Studio、MCP Registry 与 Model Nexus。
+# 与主 docker-compose.yml / compose-v2/compose.yaml 合并加载；网络 g2rain-network 由主文件定义。
+# 片段文件无法引用主文件 YAML 锚点，资源上限在本文件内联声明。
+services:
+  # 面向用户的智能客服入口属于 Agent 扩展
+  g2rain-chat-shell:
+    image: ${CHAT_SHELL_IMAGE:-ghcr.io/g2rain/g2rain-chat-shell:1.0.0}
+    container_name: g2rain-chat-shell
+    restart: unless-stopped
+    security_opt:
+      - seccomp=unconfined
+    volumes:
+      - ./logs/g2rain-chat-shell:/logs
+      - ./config/g2rain-chat-shell/keys:/usr/local/openresty/nginx/lua/keys:ro
+    environment:
+      - TZ=${TZ:-Asia/Shanghai}
+      - SERVER_PORT=8080
+      - CONTEXT_PATH=/chat
+      - APPLICATION_CODE=g2rain-chat-shell
+      - SSO_BASE_URL=${PLATFORM_BASE_URL}
+      - ANONYMOUS_ENTRY_KEY=${CHAT_ANONYMOUS_ENTRY_KEY:-}
+      - GATEWAY_HOST=g2rain-gateway
+      - GATEWAY_PORT=8080
+      - IAM_HOST=g2rain-iam
+      - IAM_PORT=8080
+    networks:
+      - g2rain-network
+    depends_on:
+      g2rain-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8080/ 2>/dev/null || nc -z 127.0.0.1 8080 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 120s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 192M
+        reservations:
+          cpus: "0.05"
+          memory: 32M
+
+  g2rain-agent-app:
+    image: ${AGENT_APP_IMAGE:-ghcr.io/g2rain/g2rain-agent-app:1.0.0}
+    container_name: g2rain-agent-app
+    restart: unless-stopped
+    volumes:
+      - ./logs/g2rain-agent-app:/logs
+      - ./config/g2rain-agent-app/keys:/usr/local/openresty/nginx/lua/keys:ro
+    environment:
+      - TZ=${TZ:-Asia/Shanghai}
+      - SERVER_PORT=8080
+      - CONTEXT_PATH=/agent
+      - APPLICATION_CODE=g2rain-agent-app
+      - SSO_BASE_URL=${PLATFORM_BASE_URL}
+      - GATEWAY_HOST=g2rain-gateway
+      - GATEWAY_PORT=8080
+      - IAM_HOST=g2rain-iam
+      - IAM_PORT=8080
+    networks:
+      - g2rain-network
+    depends_on:
+      g2rain-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8080/ 2>/dev/null || nc -z 127.0.0.1 8080 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 120s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 192M
+        reservations:
+          cpus: "0.05"
+          memory: 32M
+
+  g2rain-agent-runtime:
+    image: ${AGENT_RUNTIME_IMAGE:-ghcr.io/g2rain/g2rain-agent-runtime:1.0.0}
+    container_name: g2rain-agent-runtime
+    restart: unless-stopped
+    volumes:
+      - ./logs/g2rain-agent-runtime:/logs
+    environment:
+      - TZ=${TZ:-Asia/Shanghai}
+      - SERVER_PORT=8080
+      - SPRING_PROFILES_ACTIVE=nacos
+      - NACOS_SERVER_ADDR=${NACOS_SERVER_ADDR:-nacos:8848}
+      - SPRING_CLOUD_NACOS_CONFIG_NAMESPACE=${NACOS_NAMESPACE:-g2rain-test}
+      - SPRING_CLOUD_NACOS_CONFIG_USERNAME=${NACOS_AUTH_IDENTITY_KEY:-g2rain-admin}
+      - SPRING_CLOUD_NACOS_CONFIG_PASSWORD=${NACOS_AUTH_IDENTITY_VALUE:-G2Rain@Nacos2024!Secure}
+      - SPRING_CLOUD_NACOS_DISCOVERY_NAMESPACE=${NACOS_NAMESPACE:-g2rain-test}
+      - SPRING_CLOUD_NACOS_DISCOVERY_USERNAME=${NACOS_AUTH_IDENTITY_KEY:-g2rain-admin}
+      - SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD=${NACOS_AUTH_IDENTITY_VALUE:-G2Rain@Nacos2024!Secure}
+      - JAVA_TOOL_OPTIONS=-Xms32m -Xmx256m -XX:+UseG1GC -Xss256k -XX:MaxMetaspaceSize=160m -XX:ReservedCodeCacheSize=32m -XX:+ExitOnOutOfMemoryError
+    networks:
+      - g2rain-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 8080 || timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8080' || exit 1"]
+      interval: 15s
+      timeout: 15s
+      retries: 15
+      start_period: 180s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+        reservations:
+          cpus: "0.10"
+          memory: 128M
+
+  g2rain-agent-studio:
+    image: ${AGENT_STUDIO_IMAGE:-ghcr.io/g2rain/g2rain-agent-studio:1.0.0}
+    container_name: g2rain-agent-studio
+    restart: unless-stopped
+    volumes:
+      - ./logs/g2rain-agent-studio:/logs
+    environment:
+      - TZ=${TZ:-Asia/Shanghai}
+      - SERVER_PORT=8080
+      - SPRING_PROFILES_ACTIVE=nacos
+      - NACOS_SERVER_ADDR=${NACOS_SERVER_ADDR:-nacos:8848}
+      - SPRING_CLOUD_NACOS_CONFIG_NAMESPACE=${NACOS_NAMESPACE:-g2rain-test}
+      - SPRING_CLOUD_NACOS_CONFIG_USERNAME=${NACOS_AUTH_IDENTITY_KEY:-g2rain-admin}
+      - SPRING_CLOUD_NACOS_CONFIG_PASSWORD=${NACOS_AUTH_IDENTITY_VALUE:-G2Rain@Nacos2024!Secure}
+      - SPRING_CLOUD_NACOS_DISCOVERY_NAMESPACE=${NACOS_NAMESPACE:-g2rain-test}
+      - SPRING_CLOUD_NACOS_DISCOVERY_USERNAME=${NACOS_AUTH_IDENTITY_KEY:-g2rain-admin}
+      - SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD=${NACOS_AUTH_IDENTITY_VALUE:-G2Rain@Nacos2024!Secure}
+      - JAVA_TOOL_OPTIONS=-Xms32m -Xmx256m -XX:+UseG1GC -Xss256k -XX:MaxMetaspaceSize=160m -XX:ReservedCodeCacheSize=32m -XX:+ExitOnOutOfMemoryError
+    networks:
+      - g2rain-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 8080 || timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8080' || exit 1"]
+      interval: 15s
+      timeout: 15s
+      retries: 15
+      start_period: 180s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+        reservations:
+          cpus: "0.10"
+          memory: 128M
+
+  g2rain-mcp-registry:
+    image: ${MCP_REGISTRY_IMAGE:-ghcr.io/g2rain/g2rain-mcp-registry:1.0.0}
+    container_name: g2rain-mcp-registry
+    restart: unless-stopped
+    volumes:
+      - ./logs/g2rain-mcp-registry:/logs
+    environment:
+      - TZ=${TZ:-Asia/Shanghai}
+      - SERVER_PORT=8080
+      - SPRING_PROFILES_ACTIVE=nacos
+      - NACOS_SERVER_ADDR=${NACOS_SERVER_ADDR:-nacos:8848}
+      - SPRING_CLOUD_NACOS_CONFIG_NAMESPACE=${NACOS_NAMESPACE:-g2rain-test}
+      - SPRING_CLOUD_NACOS_CONFIG_USERNAME=${NACOS_AUTH_IDENTITY_KEY:-g2rain-admin}
+      - SPRING_CLOUD_NACOS_CONFIG_PASSWORD=${NACOS_AUTH_IDENTITY_VALUE:-G2Rain@Nacos2024!Secure}
+      - SPRING_CLOUD_NACOS_DISCOVERY_NAMESPACE=${NACOS_NAMESPACE:-g2rain-test}
+      - SPRING_CLOUD_NACOS_DISCOVERY_USERNAME=${NACOS_AUTH_IDENTITY_KEY:-g2rain-admin}
+      - SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD=${NACOS_AUTH_IDENTITY_VALUE:-G2Rain@Nacos2024!Secure}
+      - JAVA_TOOL_OPTIONS=-Xms32m -Xmx256m -XX:+UseG1GC -Xss256k -XX:MaxMetaspaceSize=160m -XX:ReservedCodeCacheSize=32m -XX:+ExitOnOutOfMemoryError
+    networks:
+      - g2rain-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 8080 || timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8080' || exit 1"]
+      interval: 15s
+      timeout: 15s
+      retries: 15
+      start_period: 180s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+        reservations:
+          cpus: "0.10"
+          memory: 128M
+
+  g2rain-model-nexus:
+    image: ${MODEL_NEXUS_IMAGE:-ghcr.io/g2rain/g2rain-model-nexus:1.0.0}
+    container_name: g2rain-model-nexus
+    restart: unless-stopped
+    volumes:
+      - ./logs/g2rain-model-nexus:/logs
+    environment:
+      - TZ=${TZ:-Asia/Shanghai}
+      - SERVER_PORT=8080
+      - SPRING_PROFILES_ACTIVE=nacos
+      - NACOS_SERVER_ADDR=${NACOS_SERVER_ADDR:-nacos:8848}
+      - SPRING_CLOUD_NACOS_CONFIG_NAMESPACE=${NACOS_NAMESPACE:-g2rain-test}
+      - SPRING_CLOUD_NACOS_CONFIG_USERNAME=${NACOS_AUTH_IDENTITY_KEY:-g2rain-admin}
+      - SPRING_CLOUD_NACOS_CONFIG_PASSWORD=${NACOS_AUTH_IDENTITY_VALUE:-G2Rain@Nacos2024!Secure}
+      - SPRING_CLOUD_NACOS_DISCOVERY_NAMESPACE=${NACOS_NAMESPACE:-g2rain-test}
+      - SPRING_CLOUD_NACOS_DISCOVERY_USERNAME=${NACOS_AUTH_IDENTITY_KEY:-g2rain-admin}
+      - SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD=${NACOS_AUTH_IDENTITY_VALUE:-G2Rain@Nacos2024!Secure}
+      - JAVA_TOOL_OPTIONS=-Xms32m -Xmx256m -XX:+UseG1GC -Xss256k -XX:MaxMetaspaceSize=160m -XX:ReservedCodeCacheSize=32m -XX:+ExitOnOutOfMemoryError
+    networks:
+      - g2rain-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 8080 || timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8080' || exit 1"]
+      interval: 15s
+      timeout: 15s
+      retries: 15
+      start_period: 180s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+        reservations:
+          cpus: "0.10"
+          memory: 128M

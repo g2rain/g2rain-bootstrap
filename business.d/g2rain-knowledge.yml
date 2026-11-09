@@ -1,0 +1,180 @@
+# 知识库：Docling Serve、Milvus Standalone、g2rain-knowledge、g2rain-knowledge-app（Context Path /knowledge）。
+# 与主 docker-compose.yml / compose-v2/compose.yaml 合并加载；网络 g2rain-network 由主文件定义。
+# 片段文件无法引用主文件 YAML 锚点，资源上限在本文件内联声明。
+services:
+  g2rain-knowledge-app:
+    image: ${KNOWLEDGE_APP_IMAGE:-ghcr.io/g2rain/g2rain-knowledge-app:1.0.0}
+    container_name: g2rain-knowledge-app
+    restart: unless-stopped
+    volumes:
+      - ./logs/g2rain-knowledge-app:/logs
+      - ./config/g2rain-knowledge-app/keys:/usr/local/openresty/nginx/lua/keys:ro
+    environment:
+      - TZ=${TZ:-Asia/Shanghai}
+      - SERVER_PORT=8080
+      - CONTEXT_PATH=/knowledge
+      - APPLICATION_CODE=g2rain-knowledge-app
+      - SSO_BASE_URL=${PLATFORM_BASE_URL}
+      - GATEWAY_HOST=g2rain-gateway
+      - GATEWAY_PORT=8080
+      - IAM_HOST=g2rain-iam
+      - IAM_PORT=8080
+    networks:
+      - g2rain-network
+    depends_on:
+      g2rain-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8080/ 2>/dev/null || nc -z 127.0.0.1 8080 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 120s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 192M
+        reservations:
+          cpus: "0.05"
+          memory: 32M
+
+  # 文档解析：默认 CPU 镜像（无 GPU 测试栈）；宿主机端口 DOCLING_PORT（5001），栈内用 docling-serve:5001。
+  # 预热加载模型时 512M 易 OOM，故 limit 保持 2G；reservation 只是软预留，空闲不占满 1G。
+  # 基于官方 GHCR 镜像做最小兼容修复：将带 Qt 的 OpenCV 替换为同版本 headless。
+  # HybridChunker 需 sentence-transformers/all-MiniLM-L6-v2（tokenizer）。无出网环境须预置 HF cache：
+  #   HF_ENDPOINT=https://hf-mirror.com huggingface-cli download sentence-transformers/all-MiniLM-L6-v2
+  #   默认 DOCLING_HF_CACHE=/root/.cache/huggingface；或拷到独立目录后改路径
+  # 改 volumes/env 后须执行 ./update.sh 以重建容器（勿只 docker restart）。
+  docling-serve:
+    image: ${DOCLING_IMAGE:-g2rain-bootstrap/docling-serve-cpu:v1.29.0}
+    build:
+      context: ./docling-serve
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: ${DOCLING_BASE_IMAGE:-ghcr.io/docling-project/docling-serve-cpu:v1.29.0}
+    container_name: docling-serve
+    restart: unless-stopped
+    ports:
+      - "${DOCLING_PORT:-5001}:5001"
+    environment:
+      - TZ=${TZ:-Asia/Shanghai}
+      - DOCLING_SERVE_ENABLE_UI=0
+      # 容器内默认 HOME=/opt/app-root/src；HF cache 挂到此路径下，避免运行时访问 huggingface.co
+      - HF_HOME=/opt/app-root/src/.cache/huggingface
+      - HF_HUB_OFFLINE=${DOCLING_HF_HUB_OFFLINE:-1}
+      - TRANSFORMERS_OFFLINE=${DOCLING_TRANSFORMERS_OFFLINE:-1}
+      - HF_ENDPOINT=${DOCLING_HF_ENDPOINT:-https://hf-mirror.com}
+    volumes:
+      - ${DOCLING_HF_CACHE:-/root/.cache/huggingface}:/opt/app-root/src/.cache/huggingface
+    networks:
+      - g2rain-network
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 1536M
+        reservations:
+          cpus: "0.20"
+          memory: 128M
+
+  # 向量检索：Standalone 单容器使用嵌入式 etcd、Woodpecker 本地 WAL 和本地持久化。
+  # v3 单进程含 proxy、streamingnode 与嵌入式 etcd。硬上限保持 2G；reservation 仅软预留。
+  # Milvus v3 默认非 root。入口 chown 后降权启动，healthz 通过再幂等建表。
+  # 健康检查还要求建表标记，避免 g2rain-knowledge 在 collection 出现前开始检索。
+  milvus:
+    image: ${MILVUS_IMAGE:-milvusdb/milvus:v3.0.2}
+    container_name: milvus-standalone
+    user: "0:0"
+    restart: unless-stopped
+    security_opt:
+      - seccomp:unconfined
+    ports:
+      - "${MILVUS_PORT:-19530}:19530"
+    entrypoint: ["/tini", "--", "/bin/sh", "/milvus/configs/start-standalone.sh"]
+    volumes:
+      - ./data/milvus:/var/lib/milvus
+      - ./config/milvus/embedEtcd.yaml:/milvus/configs/embedEtcd.yaml:ro
+      - ./config/milvus/user.yaml:/milvus/configs/user.yaml:ro
+      - ./config/milvus/start-standalone.sh:/milvus/configs/start-standalone.sh:ro
+      - ./config/milvus/init-collection.sh:/milvus/configs/init-collection.sh:ro
+      - ./config/milvus/knowledge-collection.json:/milvus/configs/knowledge-collection.json:ro
+    environment:
+      - TZ=${TZ:-Asia/Shanghai}
+      - ETCD_USE_EMBED=true
+      - ETCD_DATA_DIR=/var/lib/milvus/etcd
+      - ETCD_CONFIG_PATH=/milvus/configs/embedEtcd.yaml
+      - COMMON_STORAGETYPE=local
+      - DEPLOY_MODE=STANDALONE
+      - KNOWLEDGE_MILVUS_COLLECTION=${KNOWLEDGE_MILVUS_COLLECTION:-g2rain_knowledge_chunks_qwen_4096_v1}
+      - MILVUS_BOOTSTRAP_TOKEN=${MILVUS_BOOTSTRAP_TOKEN:-root:Milvus}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9091/healthz >/dev/null && test -f /var/lib/milvus/.knowledge-collection-ready"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+      start_period: 180s
+    networks:
+      - g2rain-network
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 1280M
+        reservations:
+          cpus: "0.20"
+          memory: 128M
+
+  # 知识库领域服务（JDK 25）；profile 使用 nacos（与 dev 互斥）。
+  g2rain-knowledge:
+    image: ${KNOWLEDGE_IMAGE:-ghcr.io/g2rain/g2rain-knowledge:1.0.0}
+    container_name: g2rain-knowledge
+    restart: unless-stopped
+    volumes:
+      - ./logs/g2rain-knowledge:/logs
+      - ./data/g2rain-knowledge:/data/knowledge
+    environment:
+      - TZ=${TZ:-Asia/Shanghai}
+      - SERVER_PORT=8080
+      - SPRING_PROFILES_ACTIVE=nacos
+      - NACOS_SERVER_ADDR=${NACOS_SERVER_ADDR:-nacos:8848}
+      - SPRING_CLOUD_NACOS_CONFIG_NAMESPACE=${NACOS_NAMESPACE:-g2rain-test}
+      - SPRING_CLOUD_NACOS_CONFIG_USERNAME=${NACOS_AUTH_IDENTITY_KEY:-g2rain-admin}
+      - SPRING_CLOUD_NACOS_CONFIG_PASSWORD=${NACOS_AUTH_IDENTITY_VALUE:-G2Rain@Nacos2024!Secure}
+      - SPRING_CLOUD_NACOS_DISCOVERY_NAMESPACE=${NACOS_NAMESPACE:-g2rain-test}
+      - SPRING_CLOUD_NACOS_DISCOVERY_USERNAME=${NACOS_AUTH_IDENTITY_KEY:-g2rain-admin}
+      - SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD=${NACOS_AUTH_IDENTITY_VALUE:-G2Rain@Nacos2024!Secure}
+      - KNOWLEDGE_STORAGE_ROOT=${KNOWLEDGE_STORAGE_ROOT:-/data/knowledge}
+      - DOCLING_BASE_URL=${DOCLING_BASE_URL:-http://docling-serve:5001}
+      - DOCLING_API_KEY=${DOCLING_API_KEY:-}
+      - MILVUS_URI=${MILVUS_URI:-http://milvus:19530}
+      - MILVUS_TOKEN=${MILVUS_TOKEN:-}
+      - KNOWLEDGE_MILVUS_COLLECTION=${KNOWLEDGE_MILVUS_COLLECTION:-g2rain_knowledge_chunks_qwen_4096_v1}
+      - JAVA_TOOL_OPTIONS=-Xms32m -Xmx256m -XX:+UseG1GC -Xss256k -XX:MaxMetaspaceSize=160m -XX:ReservedCodeCacheSize=32m -XX:+ExitOnOutOfMemoryError
+    networks:
+      - g2rain-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+      milvus:
+        condition: service_healthy
+      docling-serve:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 8080 || timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8080' || exit 1"]
+      interval: 15s
+      timeout: 15s
+      retries: 15
+      start_period: 180s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+        reservations:
+          cpus: "0.10"
+          memory: 128M

@@ -1,0 +1,65 @@
+schemaVersion: 1
+project:
+  name: g2rain-bootstrap
+  family: shared-component
+  implementationType: docker-compose-bootstrap
+  description: 基于已发布 GHCR 镜像的 谷雨G2rain智能体平台快速启动与部署编排。
+  repositoryPath: D:/github/g2rain-bootstrap
+  ownership: G2rain platform delivery and operations
+  baseline:
+    name: g2rain-compose-bootstrap
+    version: 1.0.0-local
+    status: local
+    centralProfileAvailable: false
+    centralCatalogStatus: platform-deployment-entry
+    centralBaselineRef: "c1d33755e595845808a37ae73bb79367df6bbb1b"
+    centralCatalog: https://github.com/g2rain/g2rain/blob/c1d33755e595845808a37ae73bb79367df6bbb1b/docs/architecture/catalog/projects.yaml
+    deploymentRole: production-deployment-bootstrap
+    adoptionNote: 中央目录已登记部署入口，profile 为 null；本地基线不代表正式 Profile 采用。
+  runtimes:
+    shell: Bash
+    container: Docker
+    compose:
+      - Docker Compose V2
+  entrypoints:
+    start: ./start.sh
+    stop: ./stop.sh
+    update: ./update.sh
+  configuration:
+    environmentTemplate: .env.example
+    businessExtensions:
+      available:
+        - business.d/g2rain-agent.yml
+        - business.d/g2rain-knowledge.yml
+        - business.d/g2rain-department.yml
+        - business.d/g2rain-member.yml
+        - business.d/g2rain-cms.yml
+      examplePreset: g2rain-agent,g2rain-knowledge
+      selection:
+        env: BUSINESS_EXTENSIONS
+        cli: --business
+        mergeHelper: compose-business.inc
+        scriptHardcodedDefault: false
+    compose: docker-compose.yml
+    imageSource: ghcr.io/g2rain/*
+    localBuild:
+      - docling-serve
+  validation:
+    observedAt: "2026-11-09"
+    shellSyntax:
+      status: passed
+      filesChecked: 5
+      notes: start/stop/update、compose-business.inc、generate-ssl.sh 通过 bash -n；未执行脚本内容。
+    composeV2:
+      baseStatus: passed
+      mergedStatus: passed
+      baseServices: 13
+      mergedServices: 23
+      optionalFragmentsStatus: passed
+    runtimeDeployment: not-run
+  documentation:
+    entry: docs/index.md
+    topology: docs/architecture/topology.md
+    commands: docs/operations/commands.md
+    security: docs/security/secrets-and-data.md
+    deviations: docs/architecture/deviations.md
