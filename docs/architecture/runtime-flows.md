@@ -6,14 +6,14 @@
 2. 加载 `.env`。
 3. 若缺少 `ssl/server.crt` 或 `ssl/server.key`，调用 `config/generate-ssl.sh`，主机名取自 `PLATFORM_HOST`（默认 `localhost`）。
 4. 按 `BUSINESS_EXTENSIONS` 与 `--business` 解析业务片段，合并主 Compose。
-5. 执行 `docker compose pull --ignore-buildable`。
+5. 调用 `pull.sh`：GHCR 镜像经加速地址拉取并重新标记为原标签，其他镜像直接拉取。
 6. 执行 `docker compose up -d --build --wait`。
 7. 打印访客入口：`${PLATFORM_BASE_URL}/chat/`。
 
 ## 更新
 
 1. 使用与启动相同的 Compose 合并参数。
-2. 再次 `pull --ignore-buildable`。
+2. 再次调用 `pull.sh`。
 3. 执行 `up -d --build --remove-orphans --wait`。
 
 更新前应备份 `data/`、当前 `.env` 与镜像 digest；升级后检查健康状态与 `/chat/` 冒烟流程。未列入当前扩展集合的可选服务会被 `--remove-orphans` 移除。

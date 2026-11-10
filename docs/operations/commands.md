@@ -1,5 +1,46 @@
 # 命令参考
 
+## 拉取镜像
+
+```shell
+./pull.sh
+./pull.sh --business g2rain-agent --business g2rain-knowledge
+./pull.sh --background
+```
+
+脚本从当前 Compose 方案提取镜像。`ghcr.io` 镜像通过 `ghcr.1ms.run` 拉取后重新标记为原标签，其他 Registry 镜像直接拉取。默认并行数为 4，可通过 `IMAGE_PULL_PARALLEL` 调整。
+
+优先读取 `.env`，不存在时读取 `.env.example`。`BUSINESS_EXTENSIONS` 决定默认扩展，`--business` 在此基础上追加；拉取与后续启动应使用同一组扩展。
+
+在 `.env` 中配置：
+
+```shell
+GHCR_MIRROR=ghcr.1ms.run
+IMAGE_PULL_PARALLEL=4
+```
+
+Compose 和 Dockerfile 保留官方镜像引用。启用 Knowledge 时，脚本从合并配置的 `build.args.BASE_IMAGE` 获取 Docling 基础镜像，默认执行等价操作：
+
+```shell
+docker pull ghcr.1ms.run/docling-project/docling-serve-cpu:v1.29.0
+docker tag ghcr.1ms.run/docling-project/docling-serve-cpu:v1.29.0 \
+  ghcr.io/docling-project/docling-serve-cpu:v1.29.0
+```
+
+所有声明 `build` 的服务，其输出镜像均跳过拉取，包括自定义标签的 Docling 修复镜像。`pull.sh` 只准备镜像，不构建镜像、不启动容器；Docling 修复版由后续启动或更新流程构建。
+
+后台拉取可组合扩展参数：
+
+```shell
+./pull.sh --background --business g2rain-knowledge
+tail -f logs/image-pull.log
+cat logs/image-pull.pid
+```
+
+后台命令返回表示任务已提交，不代表下载完成；通过日志中的完成或失败信息确认结果。每次后台调用会覆盖上述日志和 PID 文件，应等待当前任务结束后再启动下一次。
+
+前台模式下，业务片段或 Compose 解析失败会终止执行；任一镜像拉取或标签转换失败会返回非零退出码。修正配置或网络问题后可重新运行。`start.sh` 与 `update.sh` 已自动调用本脚本，独立运行适用于提前准备镜像。
+
 ## 启动
 
 ```shell

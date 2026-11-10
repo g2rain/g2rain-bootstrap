@@ -112,6 +112,8 @@ BUSINESS_EXTENSIONS=g2rain-agent,g2rain-knowledge
 常用运维命令：
 
 ```bash
+./pull.sh                   # 加速拉取并转换为 Compose 需要的标签
+./pull.sh --background      # 后台拉取，日志位于 logs/image-pull.log
 ./update.sh                 # 拉取指定镜像版本、重建服务并等待健康检查
 ./stop.sh                   # 停止容器，保留数据
 
@@ -127,6 +129,10 @@ docker compose --env-file .env -f docker-compose.yml \
 ## 镜像策略
 
 G2rain 组件默认固定到正式版本，不使用 `latest`，地址均为 `ghcr.io/g2rain/<组件>:<版本>`。当前主编排与业务片段默认使用 `1.0.0`。MySQL、Redis、Nacos、Kafka、Milvus 和 Nginx 使用各自上游发布镜像。
+
+Compose 保留标准镜像地址，不绑定镜像代理。`pull.sh` 会将 `ghcr.io/...` 临时转换为 `ghcr.1ms.run/...` 拉取，随后用 `docker tag` 恢复为 Compose 所需的原标签；非 GHCR 镜像直接从原 Registry 拉取。可通过 `GHCR_MIRROR` 和 `IMAGE_PULL_PARALLEL` 调整加速域名与并行数。
+
+启用 Knowledge 时也会预拉取并重新标记 Docling 官方基础镜像；本地构建的输出镜像按 Compose 的 `build` 声明跳过。脚本支持 `--business` 追加扩展和 `--background` 后台运行，默认并行数为 4。后台进度查看 `logs/image-pull.log`；命令返回仅表示任务已提交。`start.sh`、`update.sh` 已自动调用该脚本。完整参数与失败处理见[镜像拉取说明](docs/operations/commands.md#拉取镜像)。
 
 Docling 属于公共组件：构建时拉取 `ghcr.io/docling-project/docling-serve-cpu:v1.29.0`，再通过 `docling-serve/fix-opencv.py` 将 GUI OpenCV 替换为同版本 headless 包，避免旧内核环境加载 Qt 失败。这个派生镜像只在本机生成，不要求 G2rain 另行发布。
 
@@ -251,7 +257,7 @@ HTTPS 自签证书由 `config/generate-ssl.sh` 管理；前端应用 ES256 密�
 语法与编排检查可在启动容器前进行：
 
 ```bash
-for script in start.sh stop.sh update.sh config/generate-ssl.sh config/generate_key.sh; do
+for script in pull.sh start.sh stop.sh update.sh config/generate-ssl.sh config/generate_key.sh; do
   bash -n "$script" || exit 1
 done
 
@@ -268,6 +274,7 @@ docker compose --env-file .env.example -f docker-compose.yml \
 g2rain-bootstrap/
 ├── .env.example              # 部署环境模板
 ├── docker-compose.yml        # 基础服务编排
+├── pull.sh                  # 加速拉取并恢复标准镜像标签
 ├── start.sh / stop.sh / update.sh
 ├── compose-business.inc      # 业务片段选择与合并
 ├── business.d/               # 默认与可选业务片段

@@ -18,8 +18,9 @@ echo "$GITHUB_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USER --password-stdin
 本仓库没有独立初始化脚本。首次准备步骤是：
 
 1. 复制并审查 `.env`。
-2. 执行 `./start.sh`；缺失证书时脚本会生成自签证书。
-3. 若 `.env` 尚不存在，脚本会从模板生成后退出，要求修改后再启动。
+2. 可先执行 `./pull.sh --background` 在后台准备镜像。
+3. 执行 `./start.sh`；缺失证书时脚本会生成自签证书。
+4. 若 `.env` 尚不存在，脚本会从模板生成后退出，要求修改后再启动。
 
 MySQL 初始化 SQL 仅在空数据卷首次创建时自动执行，已有数据卷不会自动重放。Docling 会在首次 `up --build` 时本机构建派生镜像；无外网或需离线 tokenizer 时，应预先准备 `DOCLING_HF_CACHE`。
 

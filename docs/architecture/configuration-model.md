@@ -56,7 +56,9 @@ docker compose --env-file .env \
 - `DOCLING_IMAGE`：本机派生标签，默认 `g2rain-bootstrap/docling-serve-cpu:v1.29.0`
 - `docling-serve/fix-opencv.py`：构建阶段替换 OpenCV
 
-`start.sh` / `update.sh` 使用 `pull --ignore-buildable`，再 `up -d --build --wait`，因此可拉取的发布镜像会更新，Docling 派生镜像在本机构建。
+`start.sh` / `update.sh` 先调用 `pull.sh`，再执行 `up -d --build --wait`（更新时另带 `--remove-orphans`）。拉取脚本按合并后的 `build` 声明跳过本地构建输出镜像，并预拉取 Docling 的 `build.args.BASE_IMAGE`；派生镜像在本机构建。
+
+`GHCR_MIRROR` 默认 `ghcr.1ms.run`，`IMAGE_PULL_PARALLEL` 默认 `4`，仅影响拉取脚本。GHCR 镜像经加速地址下载后重新标记为原官方标签，其他 Registry 直接拉取，Compose 引用保持不变。详细操作见[拉取镜像](../operations/commands.md#拉取镜像)。
 
 ## 证书与应用密钥
 

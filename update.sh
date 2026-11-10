@@ -49,5 +49,5 @@ while IFS= read -r file; do
   compose+=(-f "$file")
 done < <(g2rain_business_yml_paths)
 
-"${compose[@]}" pull --ignore-buildable
+./pull.sh "$@"
 "${compose[@]}" up -d --build --remove-orphans --wait

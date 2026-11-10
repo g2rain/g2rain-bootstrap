@@ -56,6 +56,6 @@ while IFS= read -r file; do
   compose+=(-f "$file")
 done < <(g2rain_business_yml_paths)
 
-"${compose[@]}" pull --ignore-buildable
+./pull.sh "$@"
 "${compose[@]}" up -d --build --wait
 echo "G2Rain 已启动：${PLATFORM_BASE_URL:-https://${PLATFORM_HOST:-localhost}:${PLATFORM_PORT:-10443}}/chat/"

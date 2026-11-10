@@ -22,6 +22,7 @@ project:
     compose:
       - Docker Compose V2
   entrypoints:
+    pull: ./pull.sh
     start: ./start.sh
     stop: ./stop.sh
     update: ./update.sh
@@ -45,11 +46,11 @@ project:
     localBuild:
       - docling-serve
   validation:
-    observedAt: "2026-11-09"
+    observedAt: "2026-11-10"
     shellSyntax:
       status: passed
-      filesChecked: 5
-      notes: start/stop/update、compose-business.inc、generate-ssl.sh 通过 bash -n；未执行脚本内容。
+      filesChecked: 6
+      notes: pull/start/stop/update、compose-business.inc、generate-ssl.sh 通过 bash -n；未执行镜像拉取或生命周期脚本内容。
     composeV2:
       baseStatus: passed
       mergedStatus: passed

@@ -14,6 +14,7 @@
 - [运行流程](architecture/runtime-flows.md)
 - [差异与风险](architecture/deviations.md)
 - [命令参考](operations/commands.md)
+- [镜像拉取与后台准备](operations/commands.md#拉取镜像)
 - [首次安装](operations/installation.md)
 - [启动、停止与更新](operations/lifecycle.md)
 - [备份与回滚](operations/backup-and-rollback.md)
