@@ -69,7 +69,7 @@ CREATE TABLE `config_info_aggr`
 (
     `id`           bigint                                                 NOT NULL AUTO_INCREMENT COMMENT 'id',
     `data_id`      varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL COMMENT 'data_id',
-    `group_id`     varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL COMMENT 'group_id',
+    `group_id`     varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL COMMENT 'group_id',
     `datum_id`     varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL COMMENT 'datum_id',
     `content`      longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin     NOT NULL COMMENT '内容',
     `gmt_modified` datetime                                               NOT NULL COMMENT '修改时间',
