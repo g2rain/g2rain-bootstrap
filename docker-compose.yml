@@ -499,10 +499,12 @@ services:
 
   # Kafka（单节点 KRaft，无 ZooKeeper，供联调；官方镜像 apache/kafka）
   # 容器内地址：kafka:9092，例如 spring.kafka.bootstrap-servers=kafka:9092
-  # 数据使用命名卷 kafka_data；从 bitnami 迁移后若启动失败，请删除旧卷：docker volume rm g2rain-deploy_kafka_data
+  # 官方镜像默认 appuser(1000)；命名卷多为 root 所有，会 AccessDenied。联调以 root 跑写入。
+  # 数据卷异常时可：docker volume rm g2rain-bootstrap_kafka_data
   kafka:
     image: apache/kafka:3.9.0
     container_name: kafka
+    user: "0:0"
     restart: unless-stopped
     hostname: kafka
     ports:
