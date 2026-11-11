@@ -386,6 +386,7 @@ services:
       - ./config/mysql/g2rain-agent-runtime.sql:/docker-entrypoint-initdb.d/g2rain-agent-runtime.sql
       - ./config/mysql/g2rain-model-nexus.sql:/docker-entrypoint-initdb.d/g2rain-model-nexus.sql
       - ./config/mysql/g2rain-mcp-registry.sql:/docker-entrypoint-initdb.d/g2rain-mcp-registry.sql
+      - ./config/mysql/g2rain-knowledge.sql:/docker-entrypoint-initdb.d/g2rain-knowledge.sql
       - ./logs/mysql:/var/log/mysql
     networks:
       - g2rain-network
