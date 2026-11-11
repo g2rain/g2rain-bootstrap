@@ -3,7 +3,7 @@
 文档和脚本开发可在不连接 Docker Engine 的情况下完成大部分静态检查。推荐在 Linux 或兼容 Bash 环境验证脚本行为，并解析合并后的 Compose 配置。
 
 ```shell
-bash -n pull.sh start.sh stop.sh update.sh compose-business.inc
+bash -n pull.sh init-once.sh start.sh stop.sh update.sh compose-business.inc
 bash -n config/generate-ssl.sh
 docker compose --env-file .env.example -f docker-compose.yml config
 docker compose --env-file .env.example \

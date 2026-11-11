@@ -15,13 +15,16 @@ echo "$GITHUB_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USER --password-stdin
 
 ## 执行原则
 
-本仓库没有独立初始化脚本。首次准备步骤是：
+首次准备由 `./init-once.sh` 完成（也可由 `./start.sh` 在缺少完成标记时自动调用）：
 
-1. 复制并审查 `.env`。
-2. 可先执行 `./pull.sh --background` 在后台准备镜像。
-3. 执行 `./start.sh`；缺失证书时脚本会生成自签证书。
-4. 若 `.env` 尚不存在，脚本会从模板生成后退出，要求修改后再启动。
+1. 复制并审查 `.env`（可用 `./init-once.sh --host <主机> --port <端口>` 写入平台地址）。
+2. 将 `PLATFORM_HOST` / `PLATFORM_PORT` 写入 `config/mysql/g2rain-basis.sql` 中的占位符（须在空 MySQL 数据卷前完成）。
+3. 缺失证书时生成自签证书，并写入 `.g2rain-bootstrap-init.done`。
+4. 可先执行 `./pull.sh --background` 在后台准备镜像。
+5. 执行 `./start.sh` 拉取镜像并启动。
 
-MySQL 初始化 SQL 仅在空数据卷首次创建时自动执行，已有数据卷不会自动重放。Docling 会在首次 `up --build` 时本机构建派生镜像；无外网或需离线 tokenizer 时，应预先准备 `DOCLING_HF_CACHE`。
+若 `.env` 尚不存在且未传入 `--host`/`--port`，`init-once.sh` 会从模板生成后退出，要求修改后再跑。
+
+MySQL 初始化 SQL 仅在空数据卷首次创建时自动执行，已有数据卷不会自动重放；改平台地址后若需生效，须清空 `data/mysql`（或等价数据卷）后重装。Docling 会在首次 `up --build` 时本机构建派生镜像；无外网或需离线 tokenizer 时，应预先准备 `DOCLING_HF_CACHE`。
 
 不要对不受信任的 Compose 片段、镜像覆盖或密钥目录运行该流程。

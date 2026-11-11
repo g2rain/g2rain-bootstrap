@@ -1,5 +1,15 @@
 # 启动、停止与更新
 
+## 首次准备
+
+首次部署或更换平台访问地址（且 MySQL 数据卷仍为空）时，先执行：
+
+```shell
+./init-once.sh --host your.server.host --port 10443
+```
+
+也可只改好 `.env` 后执行 `./init-once.sh`。该步骤会替换 `g2rain-basis.sql` 占位符并按需生成证书。`start.sh` 在缺少完成标记时会自动调用。
+
 ## 启动
 
 启动前先解析 Compose：

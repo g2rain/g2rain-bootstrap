@@ -30,4 +30,4 @@
 
 ## 执行边界
 
-生命周期脚本会拉取 GHCR 与上游镜像，并在本机构建 Docling 派生镜像。只允许受评审的镜像标签、Dockerfile 与配置参与部署。不要对不受信任的覆盖变量或外部挂载内容执行 `start.sh` / `update.sh`。
+生命周期脚本会拉取 GHCR 与上游镜像，并在本机构建 Docling 派生镜像。只允许受评审的镜像标签、Dockerfile 与配置参与部署。不要对不受信任的覆盖变量或外部挂载内容执行 `init-once.sh` / `start.sh` / `update.sh`。

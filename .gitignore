@@ -1,4 +1,5 @@
 .env
+.g2rain-bootstrap-init.done
 data/
 logs/
 ssl/

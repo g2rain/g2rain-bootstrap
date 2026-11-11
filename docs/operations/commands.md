@@ -41,6 +41,19 @@ cat logs/image-pull.pid
 
 前台模式下，业务片段或 Compose 解析失败会终止执行；任一镜像拉取或标签转换失败会返回非零退出码。修正配置或网络问题后可重新运行。`start.sh` 与 `update.sh` 已自动调用本脚本，独立运行适用于提前准备镜像。
 
+## 首次准备
+
+```shell
+./init-once.sh
+./init-once.sh --host your.server.host --port 10443
+./init-once.sh --force
+```
+
+- 若不存在 `.env`：从 `.env.example` 复制；未传 `--host`/`--port` 时退出，提示修改后再运行。
+- 用 `.env` 中的 `PLATFORM_HOST` / `PLATFORM_PORT` 替换 `config/mysql/g2rain-basis.sql` 占位符。
+- 若缺少 `ssl/server.crt` 或 `ssl/server.key`：调用 `./config/generate-ssl.sh`。
+- 成功后写入 `.g2rain-bootstrap-init.done`。不拉取镜像、不启动容器。
+
 ## 启动
 
 ```shell
@@ -49,8 +62,7 @@ cat logs/image-pull.pid
 ./start.sh --business g2rain-cms
 ```
 
-- 若不存在 `.env`：复制 `.env.example` 后退出，提示修改后再运行。
-- 若缺少 `ssl/server.crt` 或 `ssl/server.key`：调用 `./config/generate-ssl.sh "${PLATFORM_HOST:-localhost}"`。
+- 缺少完成标记、仍有 SQL 占位符或缺少证书时，自动调用 `./init-once.sh`。
 - 按 `BUSINESS_EXTENSIONS` 与 `--business` 合并片段，拉取可拉取镜像，构建 Docling 派生镜像，启动并等待健康。
 
 ## 停止

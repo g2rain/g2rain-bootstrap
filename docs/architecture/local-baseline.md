@@ -4,11 +4,11 @@
 
 登记依据：[中央项目目录](https://github.com/g2rain/g2rain/blob/c1d33755e595845808a37ae73bb79367df6bbb1b/docs/architecture/catalog/projects.yaml)，固定基线提交 `c1d33755e595845808a37ae73bb79367df6bbb1b`，2026-11-08 复核。中央登记的 `configuration-validated` 只表示配置检查，不代表全栈运行验收。
 
-中央目录还列有按目标生成部署方案的职责；当前仓库入口仅有启动、停止和更新脚本，未见独立方案生成命令，不应据此承诺已有生成接口。
+中央目录还列有按目标生成部署方案的职责；当前仓库入口为首次准备、启动、停止和更新脚本，未见独立方案生成命令，不应据此承诺已有生成接口。
 
 ## 基线约束
 
-- Shell 脚本使用 Bash 严格模式（`set -euo pipefail`），生命周期入口为启动、停止和更新三类命令；没有 `init-once.sh`。
+- Shell 脚本使用 Bash 严格模式（`set -euo pipefail`），生命周期入口为首次准备、启动、停止和更新；`init-once.sh` 仅做 `.env` / SQL 占位符 / SSL，不克隆源码、不构建业务镜像。
 - 仅维护 Docker Compose V2（`docker compose`）主编排；不提供 Compose V1 并行栈。
 - 主 Compose 始终先加载；业务片段仅由 `BUSINESS_EXTENSIONS` 与可追加的 `--business` 决定，脚本不写死默认扩展。
 - G2rain 组件镜像默认固定正式版本标签，地址形如 `ghcr.io/g2rain/<组件>:<版本>`，不使用 `latest`。

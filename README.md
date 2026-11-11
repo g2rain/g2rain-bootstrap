@@ -65,9 +65,10 @@ git clone https://github.com/g2rain/g2rain-bootstrap.git
 cd g2rain-bootstrap
 cp .env.example .env
 # 修改 .env 中的访问地址；生产部署还需按下文同步轮换凭据
+./init-once.sh
 ```
 
-若未提前创建 `.env`，直接执行 `./start.sh` 会复制模板后退出，改完配置再启动即可。
+也可直接 `./init-once.sh --host <主机> --port 10443`。若未提前创建 `.env`，执行 `./start.sh` 会调用 `init-once.sh`：复制模板后退出，改完配置再启动即可。
 
 ### 最小启动（仅基础栈）
 
@@ -166,12 +167,12 @@ Docling 属于公共组件：构建时拉取 `ghcr.io/docling-project/docling-se
 | G2rain 业务组件 | 拉取 GHCR 发布镜像 | 通过源码构建映射组织构建和更新 |
 | 构建工具 | Docker 构建 Docling 派生镜像 | 业务源码构建还涉及 JDK、Maven 等工具 |
 | Compose | 固定使用 V2 | 维护 V1/V2 编排与选择机制 |
-| 首次准备 | 复制 `.env.example`，配置后执行 `start.sh` | 提供 `init-once.sh` 初始化入口 |
+| 首次准备 | 轻量 `init-once.sh`（.env / SQL 占位符 / SSL；可由 `start.sh` 自动调用） | 提供含源码克隆与构建的 `init-once.sh` |
 | 业务片段 | 全部由 BUSINESS_EXTENSIONS / --business 选择 | 提供业务片段选择机制 |
 | 服务更新 | 按当前扩展集合整栈更新 | 支持按 Compose 服务名更新 |
 | Admin Shell | 内置基础编排 | 通过业务片段提供 |
 
-bootstrap 的默认资源档用于最低资源验证；生产部署需根据负载配置资源、网络、凭据与恢复方案。当前实际入口为三个生命周期脚本。
+bootstrap 的默认资源档用于最低资源验证；生产部署需根据负载配置资源、网络、凭据与恢复方案。当前实际入口为首次准备与启动、停止、更新脚本。
 
 本仓库不实现业务逻辑，也不替代生产级密钥管理、备份恢复、容量规划与高可用设计。
 
@@ -190,9 +191,11 @@ Admin Shell 属于基础编排，Chat Shell 随 Agent 片段加载。Knowledge �
 
 ```mermaid
 flowchart TD
-  O[部署人员] --> S[start.sh]
-  S --> E[读取环境配置并准备 HTTPS 证书]
-  E --> C[基础编排 + 所选业务扩展]
+  O[部署人员] --> I0[init-once.sh]
+  I0 --> E[.env / SQL 占位符 / HTTPS 证书]
+  O --> S[start.sh]
+  S --> I0
+  S --> C[基础编排 + 所选业务扩展]
   C --> I[拉取发布镜像并构建 Docling]
   I --> H[启动服务并等待健康检查]
   O --> X[可选 --business / BUSINESS_EXTENSIONS]
@@ -221,7 +224,7 @@ flowchart TD
 | `BUSINESS_EXTENSIONS` | 业务片段列表 | 逗号分隔；未配置则只启基础栈。`.env.example` 预填 `g2rain-agent,g2rain-knowledge`。 |
 | `--business <名>` | 临时追加业务片段 | 可重复；与 `BUSINESS_EXTENSIONS` 合并去重。`start` / `stop` / `update` 应使用同一组扩展。 |
 
-三个生命周期脚本通过 `compose-business.inc` 合并主 `docker-compose.yml` 与所选业务片段。当前不解析 `--service` 或 Compose V1/V2 选择参数。
+启动、停止与更新脚本通过 `compose-business.inc` 合并主 `docker-compose.yml` 与所选业务片段。当前不解析 `--service` 或 Compose V1/V2 选择参数。
 
 调整服务或扩展时，应同时检查三个脚本的编排组合及服务依赖。业务片段中的资源上限独立声明，修改主文件的 YAML 锚点不会自动改变片段中的限制。完整说明见[配置与合并模型](docs/architecture/configuration-model.md) 与 [business.d/README.md](business.d/README.md)。
 
@@ -236,7 +239,8 @@ docker compose --env-file .env -f docker-compose.yml \
 
 | 命令 | 行为 |
 | --- | --- |
-| `./start.sh [--business <名>]...` | 缺少 `.env` 时复制模板并退出；缺少 HTTPS 证书时生成自签证书；按所选扩展拉取镜像、构建 Docling 并等待服务健康。 |
+| `./init-once.sh [--host HOST] [--port PORT] [--force]` | 首次准备：确保 `.env`、替换 `g2rain-basis.sql` 平台地址占位符、按需生成自签证书并写入完成标记。 |
+| `./start.sh [--business <名>]...` | 需要时自动调用 `init-once.sh`；按所选扩展拉取镜像、构建 Docling 并等待服务健康。 |
 | `./update.sh [--business <名>]...` | 对当前扩展集合执行镜像拉取与构建，再重建服务、清理孤儿容器并等待健康。 |
 | `./stop.sh [--business <名>]...` | 对当前扩展集合执行 `down`，停止并移除容器及相关网络，保留持久化卷与绑定目录。 |
 
@@ -257,7 +261,7 @@ HTTPS 自签证书由 `config/generate-ssl.sh` 管理；前端应用 ES256 密�
 语法与编排检查可在启动容器前进行：
 
 ```bash
-for script in pull.sh start.sh stop.sh update.sh config/generate-ssl.sh config/generate_key.sh; do
+for script in pull.sh init-once.sh start.sh stop.sh update.sh config/generate-ssl.sh config/generate_key.sh; do
   bash -n "$script" || exit 1
 done
 
@@ -275,6 +279,7 @@ g2rain-bootstrap/
 ├── .env.example              # 部署环境模板
 ├── docker-compose.yml        # 基础服务编排
 ├── pull.sh                  # 加速拉取并恢复标准镜像标签
+├── init-once.sh             # 首次准备（.env / SQL 占位符 / SSL）
 ├── start.sh / stop.sh / update.sh
 ├── compose-business.inc      # 业务片段选择与合并
 ├── business.d/               # 默认与可选业务片段
@@ -310,7 +315,8 @@ g2rain-bootstrap/
 
 | 现象 | 排查方向 |
 | --- | --- |
-| 首次运行后直接退出 | 检查是否刚生成 `.env`；完成配置后再次启动。 |
+| 首次运行后直接退出 | 检查是否刚生成 `.env`；完成配置后再次执行 `./init-once.sh` 或 `./start.sh`。 |
+| 应用入口地址仍是占位符 | 确认已跑过 `init-once.sh`，且 MySQL 数据卷在替换后才首次初始化；已有数据需清卷后重装。 |
 | 镜像拉取失败 | 核对 GHCR 访问权限、网络及镜像标签；私有包需要正确登录。 |
 | 启动等待未完成 | 用完整编排组合查看 `ps` 和日志，检查中间件健康、端口冲突及磁盘、内存。 |
 | 修改密码后服务连不上 | 同步核对 `.env`、Redis 与 Nacos 内各服务配置，已有数据不会自动更新凭据。 |

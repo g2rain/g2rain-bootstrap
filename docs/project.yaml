@@ -22,6 +22,7 @@ project:
     compose:
       - Docker Compose V2
   entrypoints:
+    initOnce: ./init-once.sh
     pull: ./pull.sh
     start: ./start.sh
     stop: ./stop.sh
@@ -49,8 +50,8 @@ project:
     observedAt: "2026-11-10"
     shellSyntax:
       status: passed
-      filesChecked: 6
-      notes: pull/start/stop/update、compose-business.inc、generate-ssl.sh 通过 bash -n；未执行镜像拉取或生命周期脚本内容。
+      filesChecked: 7
+      notes: init-once/pull/start/stop/update、compose-business.inc、generate-ssl.sh 通过 bash -n；未执行镜像拉取或生命周期脚本内容。
     composeV2:
       baseStatus: passed
       mergedStatus: passed

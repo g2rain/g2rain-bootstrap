@@ -31,7 +31,7 @@
 
 2026-11-09 本次静态复核：
 
-- `start.sh`、`stop.sh`、`update.sh`、`compose-business.inc`、`config/generate-ssl.sh` 的 Bash 语法检查通过。
+- `init-once.sh`、`start.sh`、`stop.sh`、`update.sh`、`compose-business.inc`、`config/generate-ssl.sh` 的 Bash 语法检查通过。
 - Docker Compose 成功解析基础编排（13 个服务）、默认 Agent+Knowledge（23 个服务），以及追加 department/member/cms 后的组合。
 
 未启动容器，未验证运行时健康状态，也未执行安装、更新、停止或清理操作。静态检查不等同于部署验收；已知限制见[差异与风险](architecture/deviations.md)。

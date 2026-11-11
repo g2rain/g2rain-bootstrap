@@ -4,7 +4,7 @@
 
 2026-11-09 静态复核：
 
-- `start.sh`、`stop.sh`、`update.sh`、`compose-business.inc`、`config/generate-ssl.sh` 通过 `bash -n`。
+- `init-once.sh`、`start.sh`、`stop.sh`、`update.sh`、`compose-business.inc`、`config/generate-ssl.sh` 通过 `bash -n`。
 - Docker Compose 成功解析基础编排（13 服务）、默认 Agent+Knowledge（23 服务），以及追加 department/member/cms 的组合。
 - 未执行容器运行测试。
 

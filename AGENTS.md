@@ -7,14 +7,14 @@
 ## 工作入口
 
 - 先阅读 `docs/index.md`、`docs/project.yaml` 和任务涉及的运维、安全文档。
-- 以 `start.sh`、`stop.sh`、`update.sh`、`compose-business.inc`、根目录 `docker-compose.yml`、`business.d/*.yml`、`.env.example` 与 `config/` 为当前行为事实来源。
-- 修改镜像标签、资源上限、端口、卷、业务扩展选择、证书生成或凭据约定时，同步更新 `docs/` 与 `README.md`。
-- 不执行 `start.sh`、`stop.sh`、`update.sh`、`docker compose down -v`、`config/generate-ssl.sh` 或 `config/generate_key.sh`，除非用户明确授权对应环境和影响范围。
+- 以 `init-once.sh`、`start.sh`、`stop.sh`、`update.sh`、`compose-business.inc`、根目录 `docker-compose.yml`、`business.d/*.yml`、`.env.example` 与 `config/` 为当前行为事实来源。
+- 修改镜像标签、资源上限、端口、卷、业务扩展选择、证书生成、SQL 占位符或凭据约定时，同步更新 `docs/` 与 `README.md`。
+- 不执行 `init-once.sh`、`start.sh`、`stop.sh`、`update.sh`、`docker compose down -v`、`config/generate-ssl.sh` 或 `config/generate_key.sh`，除非用户明确授权对应环境和影响范围。
 
 ## 安全验证
 
 ```shell
-bash -n start.sh stop.sh update.sh compose-business.inc
+bash -n init-once.sh start.sh stop.sh update.sh compose-business.inc
 bash -n config/generate-ssl.sh config/generate_key.sh
 docker compose --env-file .env.example -f docker-compose.yml config
 docker compose --env-file .env.example -f docker-compose.yml -f business.d/g2rain-agent.yml -f business.d/g2rain-knowledge.yml config

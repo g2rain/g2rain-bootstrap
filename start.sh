@@ -14,8 +14,25 @@ usage() {
   ./start.sh --business g2rain-agent --business g2rain-knowledge
   ./start.sh --business g2rain-department --business g2rain-member
 
+首次准备（.env / SQL 占位符 / SSL）由 ./init-once.sh 完成；缺少完成标记时本脚本会自动调用。
 推荐组合见 .env.example 与 business.d/README.md。
 EOF
+}
+
+needs_init_once() {
+  if [[ ! -f .g2rain-bootstrap-init.done ]]; then
+    return 0
+  fi
+  if [[ ! -f .env ]]; then
+    return 0
+  fi
+  if [[ -f config/mysql/g2rain-basis.sql ]] && grep -q '__PLATFORM_HOST__' config/mysql/g2rain-basis.sql 2>/dev/null; then
+    return 0
+  fi
+  if [[ ! -f ssl/server.crt || ! -f ssl/server.key ]]; then
+    return 0
+  fi
+  return 1
 }
 
 g2rain_parse_business_args "$@"
@@ -35,20 +52,14 @@ if ((${#G2RAIN_REMAINING_ARGS[@]} > 0)); then
   done
 fi
 
-if [[ ! -f .env ]]; then
-  cp .env.example .env
-  echo "已生成 .env，请先修改其中的密码与访问地址，然后重新运行 ./start.sh。"
-  exit 1
+if needs_init_once; then
+  ./init-once.sh
 fi
 
 set -a
 # shellcheck disable=SC1091
 source .env
 set +a
-
-if [[ ! -f ssl/server.crt || ! -f ssl/server.key ]]; then
-  ./config/generate-ssl.sh "${PLATFORM_HOST:-localhost}"
-fi
 
 compose=(docker compose --env-file .env -f docker-compose.yml)
 while IFS= read -r file; do
