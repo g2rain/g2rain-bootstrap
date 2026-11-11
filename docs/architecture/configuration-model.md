@@ -23,7 +23,7 @@ Chat Shell 匿名接入码使用 `CHAT_ANONYMOUS_ENTRY_KEY`；为空表示不开
 | MySQL | `x-deploy-mysql` | 0.50 CPU / 512M |
 | Redis | `x-deploy-redis` | 0.20 CPU / 160M |
 | Nacos | `x-deploy-nacos` | 0.50 CPU / 640M |
-| Kafka | `x-deploy-kafka` | 0.50 CPU / 384M |
+| Kafka | `x-deploy-kafka` | 0.50 CPU / 768M |
 | Nginx | `x-deploy-nginx` | 0.10 CPU / 96M |
 | Docling | `business.d/g2rain-knowledge.yml` 内联 | 1.00 CPU / 1536M |
 | Milvus | `business.d/g2rain-knowledge.yml` 内联 | 1.00 CPU / 1280M |

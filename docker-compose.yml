@@ -58,10 +58,10 @@ x-deploy-kafka: &deploy-kafka
   resources:
     limits:
       cpus: "0.50"
-      memory: 384M
+      memory: 768M
     reservations:
       cpus: "0.10"
-      memory: 128M
+      memory: 256M
 
 x-deploy-nginx: &deploy-nginx
   resources:
@@ -528,7 +528,7 @@ services:
       - KAFKA_MESSAGE_MAX_BYTES=10485760
       - KAFKA_REPLICA_FETCH_MAX_BYTES=10485760
       - KAFKA_LOG_DIRS=/tmp/kraft-combined-logs
-      - KAFKA_HEAP_OPTS=-Xms128m -Xmx256m
+      - KAFKA_HEAP_OPTS=-Xms256m -Xmx512m
     volumes:
       - kafka_data:/tmp/kraft-combined-logs
     networks:
