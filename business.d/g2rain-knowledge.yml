@@ -42,10 +42,9 @@ services:
   # 文档解析：默认 CPU 镜像（无 GPU 测试栈）；宿主机端口 DOCLING_PORT（5001），栈内用 docling-serve:5001。
   # 预热加载模型时 512M 易 OOM，故 limit 保持 2G；reservation 只是软预留，空闲不占满 1G。
   # 基于官方 GHCR 镜像做最小兼容修复：将带 Qt 的 OpenCV 替换为同版本 headless。
-  # HybridChunker 需 sentence-transformers/all-MiniLM-L6-v2（tokenizer）。无出网环境须预置 HF cache：
-  #   HF_ENDPOINT=https://hf-mirror.com huggingface-cli download sentence-transformers/all-MiniLM-L6-v2
-  #   默认 DOCLING_HF_CACHE=/root/.cache/huggingface；或拷到独立目录后改路径
-  # 改 volumes/env 后须执行 ./update.sh 以重建容器（勿只 docker restart）。
+  # HybridChunker 需 sentence-transformers/all-MiniLM-L6-v2（tokenizer）。
+  # 入口 start-docling-serve.sh：root chown HF_HOME → 缺模型时幂等预拉 → 降权 1001。
+  # 无出网：预置 DOCLING_HF_CACHE 并设 DOCLING_HF_PREFETCH=0。改挂载后须 recreate（勿只 docker restart）。
   docling-serve:
     image: ${DOCLING_IMAGE:-g2rain-bootstrap/docling-serve-cpu:v1.29.0}
     build:
@@ -54,19 +53,22 @@ services:
       args:
         BASE_IMAGE: ${DOCLING_BASE_IMAGE:-ghcr.io/docling-project/docling-serve-cpu:v1.29.0}
     container_name: docling-serve
+    user: "0:0"
     restart: unless-stopped
     ports:
       - "${DOCLING_PORT:-5001}:5001"
     environment:
       - TZ=${TZ:-Asia/Shanghai}
       - DOCLING_SERVE_ENABLE_UI=0
-      # 容器内默认 HOME=/opt/app-root/src；HF cache 挂到此路径下，避免运行时访问 huggingface.co
+      # 只挂 huggingface 子目录，勿挂整个 .cache（会遮住镜像内已烘焙的 Docling 模型）
       - HF_HOME=/opt/app-root/src/.cache/huggingface
       - HF_HUB_OFFLINE=${DOCLING_HF_HUB_OFFLINE:-1}
       - TRANSFORMERS_OFFLINE=${DOCLING_TRANSFORMERS_OFFLINE:-1}
       - HF_ENDPOINT=${DOCLING_HF_ENDPOINT:-https://hf-mirror.com}
+      - DOCLING_HF_PREFETCH=${DOCLING_HF_PREFETCH:-1}
     volumes:
       - ${DOCLING_HF_CACHE:-/root/.cache/huggingface}:/opt/app-root/src/.cache/huggingface
+
     networks:
       - g2rain-network
     deploy:

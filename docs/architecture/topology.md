@@ -29,7 +29,7 @@
 
 `docling-serve` 与 `milvus` 均接入 `g2rain-network`，并默认映射宿主机端口：Docling `5001`（`DOCLING_PORT`）、Milvus SDK `19530`（`MILVUS_PORT`）；Milvus 健康检查 `9091` 仅容器内使用。
 
-`docling-serve` 默认镜像为本地标签 `g2rain-bootstrap/docling-serve-cpu:v1.29.0`（可由 `DOCLING_IMAGE` 覆盖），由 `docling-serve/Dockerfile` 基于官方 `ghcr.io/docling-project/docling-serve-cpu:v1.29.0` 构建。构建阶段把 GUI OpenCV 换成同版本 headless，避免旧内核加载 Qt 失败。HybridChunker 依赖 `sentence-transformers/all-MiniLM-L6-v2`：与 `g2rain-deploy` 相同，将宿主机 HF cache（`DOCLING_HF_CACHE`，默认 `/root/.cache/huggingface`）挂到容器 `HF_HOME`，并默认 `HF_HUB_OFFLINE=1`，避免运行时写入/访问外网；须先在宿主机预置 MiniLM。无模型时 PROCESS 会因空 chunk 失败。
+`docling-serve` 默认镜像为本地标签 `g2rain-bootstrap/docling-serve-cpu:v1.29.0`（可由 `DOCLING_IMAGE` 覆盖），由 `docling-serve/Dockerfile` 基于官方 `ghcr.io/docling-project/docling-serve-cpu:v1.29.0` 构建。构建阶段把 GUI OpenCV 换成同版本 headless，避免旧内核加载 Qt 失败。HybridChunker 依赖 `sentence-transformers/all-MiniLM-L6-v2`：宿主机 HF cache（`DOCLING_HF_CACHE`）挂到 `HF_HOME`；入口 `start-docling-serve.sh` 以 root `chown` 后，缺模型时幂等预拉（`DOCLING_HF_PREFETCH`，默认 1），再降权到 UID 1001。业务进程默认 `HF_HUB_OFFLINE=1`。无出网环境须预置 cache 并设 `DOCLING_HF_PREFETCH=0`。
 
 `g2rain-knowledge` 通过 `http://docling-serve:5001` 调用文档解析，通过 `http://milvus:19530` 访问向量检索。`g2rain-knowledge-app` 经 Nginx `/knowledge/` 对外；业务 API 仍经 `/api/` → Gateway。Milvus 以 Standalone 单容器运行，使用嵌入式 etcd、Woodpecker 本地 WAL 和本地存储，数据持久化在 `data/milvus/`。知识原文件及解析产物持久化在 `data/g2rain-knowledge/`（容器内默认 `/data/knowledge`）。
 

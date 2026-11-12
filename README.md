@@ -218,8 +218,9 @@ flowchart TD
 | `CHAT_ANONYMOUS_ENTRY_KEY` | Chat Shell 匿名接入 | 为空时不开放匿名访问；按环境安全配置。 |
 | `*_IMAGE` | 覆盖组件镜像 | 使用 Compose 中定义的变量，如 `GATEWAY_IMAGE`、`KNOWLEDGE_IMAGE`；指定可追溯版本。 |
 | `DOCLING_BASE_IMAGE` / `DOCLING_IMAGE` | Docling 基础与派生镜像 | 基础镜像来自上游，派生镜像在部署主机构建。 |
-| `DOCLING_HF_CACHE` | 分词模型缓存目录（默认 `/root/.cache/huggingface`，同 deploy） | 宿主机先 `huggingface-cli download sentence-transformers/all-MiniLM-L6-v2`，并保证容器 UID 1001 可读。 |
-| `DOCLING_HF_HUB_OFFLINE` | 模型离线开关（默认 `1`） | 开启前确认缓存完整；勿依赖容器内运行时下载（易 PermissionError）。 |
+| `DOCLING_HF_CACHE` | 分词模型缓存目录（默认 `/root/.cache/huggingface`） | 入口脚本会纠正属主；首次缺 MiniLM 时可自动预拉。 |
+| `DOCLING_HF_HUB_OFFLINE` | 业务进程离线开关（默认 `1`） | 预拉由入口临时放开；无出网设 `DOCLING_HF_PREFETCH=0` 并预置 cache。 |
+| `DOCLING_HF_PREFETCH` | 入口缺模型时是否预拉（默认 `1`） | 离线部署改为 `0`。 |
 | `MILVUS_TOKEN` / `MILVUS_BOOTSTRAP_TOKEN` | Milvus 服务与初始化认证 | 轮换时同步应用连接及初始化、健康检查所用凭据。 |
 | `BUSINESS_EXTENSIONS` | 业务片段列表 | 逗号分隔；未配置则只启基础栈。`.env.example` 预填 `g2rain-agent,g2rain-knowledge`。 |
 | `--business <名>` | 临时追加业务片段 | 可重复；与 `BUSINESS_EXTENSIONS` 合并去重。`start` / `stop` / `update` 应使用同一组扩展。 |
