@@ -20,10 +20,28 @@ mkdir -p "${hf_home}/hub"
 chown -R "${uid}:${gid}" "${hf_home}"
 chmod -R g+rwX "${hf_home}" || true
 
-# 仅有空目录/锁文件/残缺快照不算就绪；须能离线读到 config.json。
+# HF hub 的 snapshots/<rev>/*.json 通常是指向 blobs/ 的符号链接。
+# find -type f 会漏掉 symlink，导致误判 incomplete 并重启循环。
+# 用 test -e（跟随链接）+ huggingface_hub local_files_only 双校验。
+shell_snapshot_present() {
+  [ -d "$model_path/snapshots" ] || return 1
+  # shellcheck disable=SC2086
+  set -- "$model_path"/snapshots/*/config.json
+  if [ -e "$1" ]; then
+    return 0
+  fi
+  set -- "$model_path"/snapshots/*/tokenizer_config.json
+  [ -e "$1" ]
+}
+
+hub_local_ok() {
+  HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 HF_HUB_DISABLE_TELEMETRY=1 \
+    python3 -c "from huggingface_hub import snapshot_download; print(snapshot_download('${model}', local_files_only=True))"
+}
+
 tokenizer_ready() {
-  [ -d "$model_path" ] || return 1
-  find "$model_path/snapshots" -type f \( -name 'config.json' -o -name 'tokenizer_config.json' \) 2>/dev/null | grep -q .
+  shell_snapshot_present || return 1
+  hub_local_ok >/dev/null 2>&1
 }
 
 need_model=1
@@ -47,11 +65,20 @@ print("docling-serve: downloaded to", path)
 PY
   chown -R "${uid}:${gid}" "${hf_home}"
   chmod -R g+rwX "${hf_home}" || true
-  if ! tokenizer_ready; then
-    echo "docling-serve: prefetch finished but tokenizer still incomplete at ${model_path}" >&2
-    find "$model_path" -maxdepth 3 -type f 2>/dev/null | head -n 40 >&2 || true
+
+  if ! shell_snapshot_present; then
+    echo "docling-serve: prefetch finished but snapshots/config.json missing under ${model_path}" >&2
+    ls -la "$model_path/snapshots" >&2 || true
+    find "$model_path/snapshots" \( -type f -o -type l \) 2>/dev/null | head -n 40 >&2 || true
     exit 1
   fi
+  if ! hub_path="$(hub_local_ok)"; then
+    echo "docling-serve: prefetch finished but huggingface_hub local_files_only=True failed for ${model}" >&2
+    ls -la "$model_path/snapshots" >&2 || true
+    find "$model_path/snapshots" \( -type f -o -type l \) 2>/dev/null | head -n 40 >&2 || true
+    exit 1
+  fi
+  echo "docling-serve: tokenizer cache ready at ${hub_path}"
 fi
 
 if [ "$#" -eq 0 ]; then
