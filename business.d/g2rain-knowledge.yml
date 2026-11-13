@@ -40,7 +40,7 @@ services:
           memory: 32M
 
   # 文档解析：默认 CPU 镜像（无 GPU 测试栈）；宿主机端口 DOCLING_PORT（5001），栈内用 docling-serve:5001。
-  # 预热加载模型时 512M 易 OOM，故 limit 保持 2G；reservation 只是软预留，空闲不占满 1G。
+  # HybridChunker+PDF 峰值高，limit 3G；reservation 只是软预留。
   # 基于官方 GHCR 镜像做最小兼容修复：将带 Qt 的 OpenCV 替换为同版本 headless。
   # HybridChunker 需 sentence-transformers/all-MiniLM-L6-v2（tokenizer）。
   # 入口 start-docling-serve.sh：root chown HF_HOME → 缺模型时幂等预拉 → 降权 1001。
@@ -74,11 +74,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1.00"
-          memory: 1536M
+          cpus: "1.50"
+          memory: 3G
         reservations:
-          cpus: "0.20"
-          memory: 128M
+          cpus: "0.25"
+          memory: 512M
 
   # 向量检索：Standalone 单容器使用嵌入式 etcd、Woodpecker 本地 WAL 和本地持久化。
   # v3 单进程含 proxy、streamingnode 与嵌入式 etcd。硬上限保持 2G；reservation 仅软预留。
