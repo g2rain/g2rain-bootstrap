@@ -33,7 +33,7 @@
 
 `g2rain-knowledge` 通过 `http://docling-serve:5001` 调用文档解析，通过 `http://milvus:19530` 访问向量检索。`g2rain-knowledge-app` 经 Nginx `/knowledge/` 对外；业务 API 仍经 `/api/` → Gateway。Milvus 以 Standalone 单容器运行，使用嵌入式 etcd、Woodpecker 本地 WAL 和本地存储，数据持久化在 `data/milvus/`。知识原文件及解析产物持久化在 `data/g2rain-knowledge/`（容器内默认 `/data/knowledge`）。
 
-Milvus v3 镜像默认非 root：入口以 root `chown` `data/milvus/` 后降权启动。进程健康后按 `config/milvus/knowledge-collection.json` 幂等创建 collection，并写入 `data/milvus/.knowledge-collection-ready`；健康检查同时要求该标记。已存在的同名 collection 不会因更新模板自动补列。
+Milvus v3 镜像默认非 root：入口以 root `chown` `data/milvus/` 后降权启动。进程健康后按 `config/milvus/knowledge-collection.json` 幂等创建 collection，再按 `MILVUS_TOKEN` 幂等创建业务角色/用户并授权（`init-knowledge-user.sh`），最后写入 `data/milvus/.knowledge-collection-ready`；健康检查同时要求该标记。已存在的同名 collection 不会因更新模板自动补列；已存在用户不会自动改密。
 
 ## 对外入口
 

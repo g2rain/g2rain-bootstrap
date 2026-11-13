@@ -8,7 +8,7 @@
 
 - 宿主机 `.env` 中的 MySQL、Redis、Nacos 相关变量
 - Nacos 内各服务的数据源与 Redis 配置
-- Milvus 的 `MILVUS_TOKEN` / `MILVUS_BOOTSTRAP_TOKEN`
+- Milvus 的 `MILVUS_TOKEN` / `MILVUS_BOOTSTRAP_TOKEN`（启动时幂等建业务用户；见 `config/milvus/init-knowledge-user.sh`）
 
 只改 `.env` 会导致服务启动后仍连到旧凭据。
 

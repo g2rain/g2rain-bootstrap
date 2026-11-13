@@ -1,5 +1,5 @@
 #!/bin/sh
-# 降权启动 Milvus，健康后再幂等建表。标记文件存在后健康检查才通过。
+# 降权启动 Milvus，健康后再幂等建表与业务账号。标记文件存在后健康检查才通过。
 set -eu
 
 uid="$(id -u milvus)"
@@ -42,6 +42,10 @@ until curl -fsS http://127.0.0.1:9091/healthz >/dev/null 2>&1; do
 done
 
 if ! /bin/sh /milvus/configs/init-collection.sh; then
+  terminate
+  exit 1
+fi
+if ! /bin/sh /milvus/configs/init-knowledge-user.sh; then
   terminate
   exit 1
 fi
