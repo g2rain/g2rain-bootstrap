@@ -141,7 +141,9 @@ Docling 属于公共组件：构建时拉取 `ghcr.io/docling-project/docling-se
 
 `business.d` 全部按配置加载；`.env.example` 预填 `g2rain-agent` 与 `g2rain-knowledge`。Chat Shell 随 Agent 扩展加载，Admin Shell 已内置于基础编排。启用 CMS 前请确认对应 GHCR 镜像可拉取。
 
-当前 Compose 使用单请求 Demo 的最低资源档：Java 服务限制为 0.5 CPU / 512 MB（Xms 32 MB、Xmx 256 MB、Metaspace 160 MB、Code Cache 32 MB），前端限制为 0.25 CPU / 192 MB；Docling 与 Milvus 分别保留 1 CPU 和约 1.5 GB / 1.25 GB 内存。该配置只用于功能跑通，冷启动和文档解析会较慢，不适合并发或生产环境。
+当前 Compose 使用单请求 Demo 的低资源档：Java 服务限制为 0.5 CPU / 512 MB（Xms 32 MB、Xmx 256 MB、Metaspace 160 MB、Code Cache 32 MB），前端限制为 0.25 CPU / 192 MB；Docling 上限为 1.5 CPU / 3 GB，Milvus 上限为 1 CPU / 2 GB。Milvus 可通过 `MILVUS_MEMORY_LIMIT` 调整内存，`MILVUS_STARTUP_TIMEOUT` 设置启动等待秒数（默认 600）。这些数值尚未经运行时容量验证，冷启动和文档解析会较慢，生产环境须单独规划容量。
+
+Milvus 示例业务用户名为 `knowledge_service`。已有 `.env` 若仍使用 `knowledge-service`，需改为下划线形式，并同步应用实际使用的连接凭据；详见[Milvus 重启排查](docs/operations/lifecycle.md#milvus-重启排查)。
 
 ## 数据与安全
 

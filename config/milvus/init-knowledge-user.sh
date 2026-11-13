@@ -41,7 +41,7 @@ fi
 
 case "$user_name" in
   *[!A-Za-z0-9_]*)
-    echo "invalid milvus user name" >&2
+    echo "invalid milvus user name: use letters, digits or underscores (e.g. knowledge_service), not hyphens" >&2
     exit 1
     ;;
 esac
@@ -52,6 +52,10 @@ case "$role_name" in
     exit 1
     ;;
 esac
+
+if [ "${1:-}" = "--validate-only" ]; then
+  exit 0
+fi
 
 # 业务 token 若就是 bootstrap（例如临时 root:Milvus），无需再建业务用户。
 if [ "$app_token" = "$bootstrap" ]; then
@@ -64,7 +68,7 @@ json_escape() {
 }
 
 post() {
-  curl -sS \
+  curl --connect-timeout 5 --max-time 60 -sS \
     -H "Authorization: Bearer ${bootstrap}" \
     -H "Content-Type: application/json" \
     --data "$2" \

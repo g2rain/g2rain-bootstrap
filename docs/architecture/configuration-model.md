@@ -26,7 +26,7 @@ Chat Shell 匿名接入码使用 `CHAT_ANONYMOUS_ENTRY_KEY`；为空表示不开
 | Kafka | `x-deploy-kafka` | 0.50 CPU / 768M |
 | Nginx | `x-deploy-nginx` | 0.10 CPU / 96M |
 | Docling | `business.d/g2rain-knowledge.yml` 内联 | 1.50 CPU / 3G |
-| Milvus | `business.d/g2rain-knowledge.yml` 内联 | 1.00 CPU / 1280M |
+| Milvus | `business.d/g2rain-knowledge.yml`，内存可用 `MILVUS_MEMORY_LIMIT` 覆盖 | 1.00 CPU / 2G |
 
 业务片段文件不能引用主文件 YAML 锚点，因此各扩展服务在各自文件内重复声明资源上限。reservation 是软预留，不代表进程空闲常驻。
 

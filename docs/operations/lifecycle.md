@@ -30,6 +30,30 @@ docker compose --env-file .env \
 
 完成后应检查 Compose 状态、关键容器日志、HTTPS 入口、`/chat/` 访问、登录与核心服务调用。首次使用自签证书时，浏览器会显示安全提示。
 
+## Milvus 重启排查
+
+先在部署主机检查退出状态与日志，不要删除 `data/milvus/`：
+
+```shell
+docker inspect milvus-standalone --format 'Status={{.State.Status}} ExitCode={{.State.ExitCode}} OOMKilled={{.State.OOMKilled}} Restarts={{.RestartCount}} Memory={{.HostConfig.Memory}}'
+docker logs --tail 200 milvus-standalone
+```
+
+- `invalid milvus user name`：旧 `.env` 的 `knowledge-service` 含连字符，初始化脚本拒绝。将 `MILVUS_TOKEN` 的用户名改为 `knowledge_service`，保留自己的密码，同步 Knowledge 实际配置（含 Nacos 中的覆盖值）。启动会创建新用户，不删除旧用户，也不会修改已有用户的密码。
+- `OOMKilled=true`：检查主机可用内存与容器限制。默认上限已由 `1280M` 改为 `2G`，可用 `MILVUS_MEMORY_LIMIT` 调整；2G 不是已验证的容量保证。
+- `milvus healthz timeout`：默认启动等待为 600 秒，可通过 `MILVUS_STARTUP_TIMEOUT` 调整；同时检查前面的 Milvus 日志、磁盘与 CPU 情况。
+- 集合或账号初始化失败：查看前面的 REST 错误，检查管理员凭据 `MILVUS_BOOTSTRAP_TOKEN` 和授权。启动脚本会退出触发重启；单纯健康检查失败不会自动重启容器。
+
+已有安装更新仓库后，还需调整服务器 `.env`；新增变量不填时使用上述默认值。配置变更须重建容器才能生效，单纯 `docker restart` 不会更新环境变量或资源限制。在部署目录执行以下命令（其他业务片段按实际部署补充）：
+
+```shell
+docker compose --env-file .env -f docker-compose.yml \
+  -f business.d/g2rain-agent.yml -f business.d/g2rain-knowledge.yml \
+  up -d --no-deps milvus g2rain-knowledge
+```
+
+此操作会重建配置变化的服务并造成短暂中断，保留绑定目录中的数据。完成后检查日志与健康状态。
+
 ## 停止
 
 普通维护使用与启动相同的扩展选择，例如 `./stop.sh` 或带相同 `--business`。持久化卷与 `data/` 绑定目录默认保留。只有明确要删除数据时才使用 `down -v`，且必须先有备份与恢复方案。

@@ -15,7 +15,7 @@ case "$collection" in
 esac
 
 post() {
-  curl -sS \
+  curl --connect-timeout 5 --max-time 60 -sS \
     -H "Authorization: Bearer ${token}" \
     -H "Content-Type: application/json" \
     --data "$2" \
