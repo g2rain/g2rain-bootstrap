@@ -15,6 +15,12 @@ output="$(bash ./pull.sh)"
 [[ "$output" == *'MOCK tag ghcr.1ms.run/docling-project/docling-serve-cpu:v1.29.0 ghcr.io/docling-project/docling-serve-cpu:v1.29.0'* ]]
 [[ "$output" == *'MOCK pull redis:7-alpine'* ]]
 [[ "$output" != *'MOCK pull local/custom-docling:test'* ]]
+filtered="$(bash ./pull.sh app)"
+[[ "$filtered" == *'仅拉取指定服务镜像: app'* ]]
+[[ "$filtered" == *'MOCK pull ghcr.1ms.run/g2rain/example:1'* ]]
+[[ "$filtered" != *'MOCK pull redis:7-alpine'* ]]
+[[ "$filtered" != *'MOCK pull ghcr.1ms.run/docling-project/docling-serve-cpu:v1.29.0'* ]]
+if bash ./pull.sh nonexistent-service-review-test; then exit 1; fi
 if MOCK_FAIL=1 bash ./pull.sh; then exit 1; fi
 if bash ./pull.sh --business nonexistent-review-test; then exit 1; fi
 # 使用相同后台启动命令，从父目录经相对路径调用帮助；无需创建后台日志。

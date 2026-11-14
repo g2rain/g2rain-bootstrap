@@ -5,10 +5,11 @@
 ```shell
 ./pull.sh
 ./pull.sh --business g2rain-agent --business g2rain-knowledge
+./pull.sh g2rain-basis
 ./pull.sh --background
 ```
 
-脚本从当前 Compose 方案提取镜像。`ghcr.io` 镜像通过 `ghcr.1ms.run` 拉取后重新标记为原标签，其他 Registry 镜像直接拉取。默认并行数为 4，可通过 `IMAGE_PULL_PARALLEL` 调整。
+脚本从当前 Compose 方案提取镜像；末尾可跟 Compose 服务名，仅拉取这些服务的镜像。`ghcr.io` 镜像通过 `ghcr.1ms.run` 拉取后重新标记为原标签，其他 Registry 镜像直接拉取。默认并行数为 4，可通过 `IMAGE_PULL_PARALLEL` 调整。
 
 优先读取 `.env`，不存在时读取 `.env.example`。`BUSINESS_EXTENSIONS` 决定默认扩展，`--business` 在此基础上追加；拉取与后续启动应使用同一组扩展。
 
@@ -83,7 +84,7 @@ cat logs/image-pull.pid
 ./update.sh --business g2rain-agent --business g2rain-knowledge g2rain-basis
 ```
 
-再次拉取可拉取镜像，执行 `up -d --build --remove-orphans --wait`。可在末尾追加 Compose 服务名，仅更新这些服务；省略则更新整栈。未列入当前集合的可选服务会作为孤儿容器被移除；`--business` 选择须与启动时一致。
+指定服务时：先 `rm -sf` 容器并删除对应本地镜像，再拉取，最后 `up -d --build --force-recreate --wait`（不带 `--remove-orphans`）。省略服务名则拉取整栈并以 `--force-recreate --remove-orphans` 重建。`--business` 选择须与启动时一致。
 
 ## 辅助命令
 

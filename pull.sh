@@ -7,7 +7,7 @@ source ./compose-business.inc
 
 usage() {
   cat <<'EOF'
-用法: ./pull.sh [--background] [--business <名>]...
+用法: ./pull.sh [--background] [--business <名>]... [服务名]...
 
 拉取当前部署方案需要的镜像：
 - ghcr.io 镜像改从 ghcr.1ms.run 拉取，再打回原 ghcr.io 标签；
@@ -17,6 +17,7 @@ usage() {
 参数：
   --background       后台拉取，日志写入 logs/image-pull.log
   --business <名>    追加业务扩展，可重复指定
+  [服务名]...        仅拉取这些 Compose 服务的镜像；省略则拉取整栈
 EOF
 }
 
@@ -57,6 +58,7 @@ source "$env_file"
 set +a
 
 g2rain_parse_business_args "${forward_args[@]}"
+services=()
 if ((${#G2RAIN_REMAINING_ARGS[@]} > 0)); then
   for arg in "${G2RAIN_REMAINING_ARGS[@]}"; do
     case "$arg" in
@@ -64,10 +66,13 @@ if ((${#G2RAIN_REMAINING_ARGS[@]} > 0)); then
         usage
         exit 0
         ;;
-      *)
+      -*)
         echo "未知参数: $arg" >&2
         usage >&2
         exit 1
+        ;;
+      *)
+        services+=("$arg")
         ;;
     esac
   done
@@ -84,10 +89,20 @@ done <<< "$business_paths"
 resolved_config="$("${compose[@]}" config)"
 # 只解析 Compose 规范化输出的 services 层级，不按镜像名称猜测 build。
 # 构建型服务跳过输出镜像；Docling 的 BASE_IMAGE 仍需预拉取。
+# 若指定了服务名，仅输出这些服务对应的镜像。
+export G2RAIN_PULL_SERVICES="${services[*]-}"
 image_list="$(awk '
+  BEGIN {
+    n = split(ENVIRON["G2RAIN_PULL_SERVICES"], arr, " ")
+    for (i = 1; i <= n; i++) if (arr[i] != "") want[arr[i]] = 1
+    filter_on = (length(want) > 0)
+  }
+  function wanted() {
+    return !filter_on || (service in want)
+  }
   function emit() {
-    if (service != "" && !build && image != "") print image
-    if (service == "docling-serve" && build && base != "") print base
+    if (service != "" && wanted() && !build && image != "") print image
+    if (service == "docling-serve" && wanted() && build && base != "") print base
   }
   /^services:$/ { inside=1; next }
   inside && /^[^ ]/ { emit(); service=""; inside=0 }
@@ -104,6 +119,16 @@ images=()
 while IFS= read -r image; do
   [[ -n "$image" ]] && images+=("$image")
 done <<< "$image_list"
+
+if ((${#services[@]} > 0)) && ((${#images[@]} == 0)); then
+  echo "未找到可拉取镜像的服务: ${services[*]}" >&2
+  echo "请确认服务名属于当前 Compose 合并结果，且非仅本地 build 输出。" >&2
+  exit 1
+fi
+
+if ((${#services[@]} > 0)); then
+  echo "仅拉取指定服务镜像: ${services[*]}"
+fi
 
 mirror="${GHCR_MIRROR:-ghcr.1ms.run}"
 parallel="${IMAGE_PULL_PARALLEL:-4}"

@@ -244,7 +244,7 @@ docker compose --env-file .env -f docker-compose.yml \
 | --- | --- |
 | `./init-once.sh [--host HOST] [--port PORT] [--force]` | 首次准备：确保 `.env`、替换 `g2rain-basis.sql` 平台地址占位符、按需生成自签证书并写入完成标记。 |
 | `./start.sh [--business <名>]...` | 需要时自动调用 `init-once.sh`；按所选扩展拉取镜像、构建 Docling 并等待服务健康。 |
-| `./update.sh [--business <名>]... [服务名]...` | 对当前扩展集合拉取并重建；可追加 Compose 服务名（如 `g2rain-basis`）仅更新这些服务。 |
+| `./update.sh [--business <名>]... [服务名]...` | 更新服务；指定服务名时删容器与本地镜像后重拉并 `--force-recreate`。 |
 | `./stop.sh [--business <名>]...` | 对当前扩展集合执行 `down`，停止并移除容器及相关网络，保留持久化卷与绑定目录。 |
 
 查看完整栈日志时使用相同编排组合，末尾可指定 Compose 服务名：
