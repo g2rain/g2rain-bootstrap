@@ -84,7 +84,7 @@ cat logs/image-pull.pid
 ./update.sh --business g2rain-agent --business g2rain-knowledge g2rain-basis
 ```
 
-指定服务时：先 `rm -sf` 容器并删除对应本地镜像，再拉取，最后 `up -d --build --force-recreate --wait`（不带 `--remove-orphans`）。省略服务名则拉取整栈并以 `--force-recreate --remove-orphans` 重建。`--business` 选择须与启动时一致。
+执行拉取后 `up -d --build --force-recreate --wait`，配置变更也会重建容器，不删除本地镜像。指定服务名时仅拉取/重建这些服务（不带 `--remove-orphans`）；省略则整栈更新（带 `--remove-orphans`）。`--business` 选择须与启动时一致。
 
 ## 辅助命令
 
