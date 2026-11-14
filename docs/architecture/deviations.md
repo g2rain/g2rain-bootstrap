@@ -3,7 +3,7 @@
 ## 已确认差异
 
 - 中央 G2rain 目录已登记本项目为生产部署入口，但未发布部署编排类正式 Profile，当前使用[本地基线](local-baseline.md)。默认最低资源验证预设不代表生产容量基线。
-- 与 [g2rain-deploy](https://github.com/g2rain/g2rain-deploy) 相比：无源码构建映射、无 Compose V1 并行栈、无按服务名更新；提供轻量 `init-once.sh`（不含 codes 克隆与业务构建）；`--business` 为追加语义，不是“仅加载列出片段”。
+- 与 [g2rain-deploy](https://github.com/g2rain/g2rain-deploy) 相比：无源码构建映射、无 Compose V1 并行栈；`update.sh` 可追加 Compose 服务名做局部 `up`，但不含按 `services.conf` 拉代码构建；提供轻量 `init-once.sh`（不含 codes 克隆与业务构建）；`--business` 为追加语义，不是“仅加载列出片段”。
 - `g2rain-admin-shell` 内置于基础编排，而不是独立业务片段。
 - 业务片段全部由配置选择；脚本不写死默认扩展。CMS 启用前需确认 GHCR 镜像可拉取。
 - `.env.example` 含固定的数据库、Redis、Nacos、Milvus 示例凭据；生产环境直接沿用会形成安全风险。

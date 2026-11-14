@@ -171,7 +171,7 @@ Milvus 示例业务用户名为 `knowledge_service`。已有 `.env` 若仍使用
 | Compose | 固定使用 V2 | 维护 V1/V2 编排与选择机制 |
 | 首次准备 | 轻量 `init-once.sh`（.env / SQL 占位符 / SSL；可由 `start.sh` 自动调用） | 提供含源码克隆与构建的 `init-once.sh` |
 | 业务片段 | 全部由 BUSINESS_EXTENSIONS / --business 选择 | 提供业务片段选择机制 |
-| 服务更新 | 按当前扩展集合整栈更新 | 支持按 Compose 服务名更新 |
+| 服务更新 | 整栈或追加 Compose 服务名局部 `up`（不拉源码构建） | 支持按服务名拉代码、构建并更新 |
 | Admin Shell | 内置基础编排 | 通过业务片段提供 |
 
 bootstrap 的默认资源档用于最低资源验证；生产部署需根据负载配置资源、网络、凭据与恢复方案。当前实际入口为首次准备与启动、停止、更新脚本。
@@ -244,7 +244,7 @@ docker compose --env-file .env -f docker-compose.yml \
 | --- | --- |
 | `./init-once.sh [--host HOST] [--port PORT] [--force]` | 首次准备：确保 `.env`、替换 `g2rain-basis.sql` 平台地址占位符、按需生成自签证书并写入完成标记。 |
 | `./start.sh [--business <名>]...` | 需要时自动调用 `init-once.sh`；按所选扩展拉取镜像、构建 Docling 并等待服务健康。 |
-| `./update.sh [--business <名>]...` | 对当前扩展集合执行镜像拉取与构建，再重建服务、清理孤儿容器并等待健康。 |
+| `./update.sh [--business <名>]... [服务名]...` | 对当前扩展集合拉取并重建；可追加 Compose 服务名（如 `g2rain-basis`）仅更新这些服务。 |
 | `./stop.sh [--business <名>]...` | 对当前扩展集合执行 `down`，停止并移除容器及相关网络，保留持久化卷与绑定目录。 |
 
 查看完整栈日志时使用相同编排组合，末尾可指定 Compose 服务名：

@@ -79,9 +79,11 @@ cat logs/image-pull.pid
 ```shell
 ./update.sh
 ./update.sh --business g2rain-department
+./update.sh g2rain-basis
+./update.sh --business g2rain-agent --business g2rain-knowledge g2rain-basis
 ```
 
-再次拉取可拉取镜像，执行 `up -d --build --remove-orphans --wait`。未列入当前集合的可选服务会作为孤儿容器被移除。
+再次拉取可拉取镜像，执行 `up -d --build --remove-orphans --wait`。可在末尾追加 Compose 服务名，仅更新这些服务；省略则更新整栈。未列入当前集合的可选服务会作为孤儿容器被移除；`--business` 选择须与启动时一致。
 
 ## 辅助命令
 
