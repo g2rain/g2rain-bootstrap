@@ -4,29 +4,38 @@ set -euo pipefail
 cd "$(dirname "$0")"
 # shellcheck disable=SC1091
 source ./compose-business.inc
+# shellcheck disable=SC1091
+source ./image-bundle.inc
 
 usage() {
   cat <<'EOF'
-用法: ./pull.sh [--background] [--business <名>]... [服务名]...
+用法: ./pull.sh [--background] [--force] [--business <名>]... [服务名]...
 
-拉取当前部署方案需要的镜像：
-- ghcr.io 镜像改从 ghcr.1ms.run 拉取，再打回原 ghcr.io 标签；
-- 其他 Registry 的镜像直接拉取；
-- 默认最多并行拉取 4 个镜像。
+从镜像包站点下载 .tar.gz 并 docker load：
+- 按 Compose 合并结果提取镜像（构建型输出跳过；Docling BASE_IMAGE 会准备）；
+- 默认地址 IMAGE_BUNDLE_BASE_URL（默认 https://demo.g2rain.com/images）；
+- 本地已有同名镜像时跳过，除非指定 --force；
+- 默认最多并行下载 4 个归档。
 
 参数：
   --background       后台拉取，日志写入 logs/image-pull.log
+  --force            即使本地已有镜像也重新下载并 load
   --business <名>    追加业务扩展，可重复指定
   [服务名]...        仅拉取这些 Compose 服务的镜像；省略则拉取整栈
 EOF
 }
 
 background=0
+force=0
 forward_args=()
 while (($# > 0)); do
   case "$1" in
     --background)
       background=1
+      shift
+      ;;
+    --force)
+      force=1
       shift
       ;;
     *)
@@ -38,7 +47,7 @@ done
 
 if ((background)); then
   mkdir -p logs
-  nohup bash ./pull.sh "${forward_args[@]}" >logs/image-pull.log 2>&1 &
+  nohup bash ./pull.sh ${force:+--force} "${forward_args[@]+"${forward_args[@]}"}" >logs/image-pull.log 2>&1 &
   pid=$!
   printf '%s\n' "$pid" >logs/image-pull.pid
   echo "镜像正在后台拉取，PID: $pid"
@@ -46,18 +55,9 @@ if ((background)); then
   exit 0
 fi
 
-if [[ -f .env ]]; then
-  env_file=.env
-else
-  env_file=.env.example
-fi
+g2rain_source_env
+g2rain_parse_business_args "${forward_args[@]+"${forward_args[@]}"}"
 
-set -a
-# shellcheck disable=SC1090
-source "$env_file"
-set +a
-
-g2rain_parse_business_args "${forward_args[@]}"
 services=()
 if ((${#G2RAIN_REMAINING_ARGS[@]} > 0)); then
   for arg in "${G2RAIN_REMAINING_ARGS[@]}"; do
@@ -78,43 +78,23 @@ if ((${#G2RAIN_REMAINING_ARGS[@]} > 0)); then
   done
 fi
 
-compose=(docker compose --env-file "$env_file" -f docker-compose.yml)
-business_paths="$(g2rain_business_yml_paths)"
-while IFS= read -r file; do
-  [[ -n "$file" ]] || continue
-  compose+=(-f "$file")
-done <<< "$business_paths"
+base_url="${IMAGE_BUNDLE_BASE_URL:-https://demo.g2rain.com/images}"
+base_url="${base_url%/}"
+parallel="${IMAGE_PULL_PARALLEL:-4}"
+if ! [[ "$parallel" =~ ^[1-9][0-9]*$ ]]; then
+  echo "IMAGE_PULL_PARALLEL 必须是正整数" >&2
+  exit 1
+fi
 
-# 先检查 Compose 的退出状态，避免进程替换吞掉解析错误。
-resolved_config="$("${compose[@]}" config)"
-# 只解析 Compose 规范化输出的 services 层级，不按镜像名称猜测 build。
-# 构建型服务跳过输出镜像；Docling 的 BASE_IMAGE 仍需预拉取。
-# 若指定了服务名，仅输出这些服务对应的镜像。
-export G2RAIN_PULL_SERVICES="${services[*]-}"
-image_list="$(awk '
-  BEGIN {
-    n = split(ENVIRON["G2RAIN_PULL_SERVICES"], arr, " ")
-    for (i = 1; i <= n; i++) if (arr[i] != "") want[arr[i]] = 1
-    filter_on = (length(want) > 0)
-  }
-  function wanted() {
-    return !filter_on || (service in want)
-  }
-  function emit() {
-    if (service != "" && wanted() && !build && image != "") print image
-    if (service == "docling-serve" && wanted() && build && base != "") print base
-  }
-  /^services:$/ { inside=1; next }
-  inside && /^[^ ]/ { emit(); service=""; inside=0 }
-  inside && /^  [^ ]/ {
-    emit(); service=$1; sub(/:$/, "", service)
-    build=0; image=""; base=""; next
-  }
-  inside && /^    build:/ { build=1 }
-  inside && /^    image:/ { image=$2 }
-  inside && /^        BASE_IMAGE:/ { base=$2 }
-  END { emit() }
-' <<< "$resolved_config" | sort -u)"
+if ! command -v curl >/dev/null 2>&1; then
+  echo "需要 curl 才能从镜像包站点下载" >&2
+  exit 1
+fi
+
+if ! image_list="$(g2rain_list_images "${services[@]+"${services[@]}"}")"; then
+  echo "解析 Compose 镜像列表失败" >&2
+  exit 1
+fi
 images=()
 while IFS= read -r image; do
   [[ -n "$image" ]] && images+=("$image")
@@ -130,25 +110,36 @@ if ((${#services[@]} > 0)); then
   echo "仅拉取指定服务镜像: ${services[*]}"
 fi
 
-mirror="${GHCR_MIRROR:-ghcr.1ms.run}"
-parallel="${IMAGE_PULL_PARALLEL:-4}"
-if ! [[ "$parallel" =~ ^[1-9][0-9]*$ ]]; then
-  echo "IMAGE_PULL_PARALLEL 必须是正整数" >&2
-  exit 1
-fi
-
 pull_one() {
-  local image="$1" accelerated
-  if [[ "$image" == ghcr.io/* ]]; then
-    accelerated="${mirror}/${image#ghcr.io/}"
-    echo "拉取 GHCR 加速镜像: $accelerated"
-    docker pull "$accelerated"
-    docker tag "$accelerated" "$image"
-    echo "已标记为: $image"
-  else
-    echo "直接拉取镜像: $image"
-    docker pull "$image"
+  local image="$1"
+  local archive url
+  archive="$(g2rain_image_archive_name "$image")"
+  url="${base_url}/${archive}"
+
+  if ((force == 0)) && docker image inspect "$image" >/dev/null 2>&1; then
+    echo "已存在，跳过: $image"
+    return 0
   fi
+
+  echo "下载并加载: $url"
+  local tmp
+  tmp="$(mktemp "${TMPDIR:-/tmp}/g2rain-image.XXXXXX")"
+  # shellcheck disable=SC2064
+  trap "rm -f '$tmp'" RETURN
+  if ! curl -fL --retry 3 --retry-delay 2 -o "$tmp" "$url"; then
+    echo "下载失败: $image ($url)" >&2
+    return 1
+  fi
+  if ! docker load -i "$tmp"; then
+    echo "docker load 失败: $image" >&2
+    return 1
+  fi
+
+  if ! docker image inspect "$image" >/dev/null 2>&1; then
+    echo "load 完成但未找到标签: $image（请确认归档由 save.sh 按同名镜像导出）" >&2
+    return 1
+  fi
+  echo "已加载: $image"
 }
 
 failed=0
@@ -164,7 +155,7 @@ for image in "${images[@]}"; do
   fi
 done
 
-for pid in "${pids[@]}"; do
+for pid in "${pids[@]+"${pids[@]}"}"; do
   if ! wait "$pid"; then
     failed=1
   fi
@@ -175,4 +166,4 @@ if ((failed)); then
   exit 1
 fi
 
-echo "镜像拉取和标签转换完成。"
+echo "镜像下载和加载完成。"

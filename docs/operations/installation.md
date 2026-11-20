@@ -3,11 +3,11 @@
 ## 前置检查
 
 - 在 Linux x86_64 主机或兼容 Bash 环境执行。
-- 安装 Docker Engine 24+、Docker Compose 2.20+ 与 OpenSSL。
+- 安装 Docker Engine 24+、Docker Compose 2.20+、OpenSSL 与 curl（`pull.sh` 下载镜像包需要）。
 - 最低单请求 Demo：4 核 CPU、16 GB 内存和 40 GB 可用磁盘；容器资源上限合计约 11.7 GB。
 - 复制 `.env.example` 为 `.env`，替换访问地址；生产环境还必须轮换所有密码、Token，并同步 Nacos 内配置。
 - 确认当前 Docker Context、磁盘空间、开放端口和持久化目录。
-- 若 GHCR 包需要认证，使用仅含 `read:packages` 的令牌登录：
+- 客户机通过 `pull.sh` 从 `IMAGE_BUNDLE_BASE_URL` 下载镜像包，通常无需登录 GHCR。导出归档的发布机若需从私有 GHCR 预拉取，可使用仅含 `read:packages` 的令牌登录：
 
 ```shell
 echo "$GITHUB_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USER --password-stdin

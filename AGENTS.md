@@ -2,19 +2,19 @@
 
 ## 项目定位
 
-本仓库负责用 Docker Compose 快速拉起 谷雨G2rain智能体平台部署栈：拉取已发布的 GHCR 镜像，按默认或所选业务扩展合并编排，管理启动、停止与更新。它不克隆源码、不执行业务构建，也不替代生产级密钥、TLS、容量规划、备份与高可用设计。
+本仓库负责用 Docker Compose 快速拉起 谷雨G2rain智能体平台部署栈：从镜像包站点下载并加载已发布镜像，按默认或所选业务扩展合并编排，管理启动、停止与更新。它不克隆源码、不执行业务构建，也不替代生产级密钥、TLS、容量规划、备份与高可用设计。
 
 ## 工作入口
 
 - 先阅读 `docs/index.md`、`docs/project.yaml` 和任务涉及的运维、安全文档。
-- 以 `init-once.sh`、`start.sh`、`stop.sh`、`update.sh`、`compose-business.inc`、根目录 `docker-compose.yml`、`business.d/*.yml`、`.env.example` 与 `config/` 为当前行为事实来源。
+- 以 `init-once.sh`、`pull.sh`、`save.sh`、`start.sh`、`stop.sh`、`update.sh`、`compose-business.inc`、`image-bundle.inc`、根目录 `docker-compose.yml`、`business.d/*.yml`、`.env.example` 与 `config/` 为当前行为事实来源。
 - 修改镜像标签、资源上限、端口、卷、业务扩展选择、证书生成、SQL 占位符或凭据约定时，同步更新 `docs/` 与 `README.md`。
 - 不执行 `init-once.sh`、`start.sh`、`stop.sh`、`update.sh`、`docker compose down -v`、`config/generate-ssl.sh` 或 `config/generate_key.sh`，除非用户明确授权对应环境和影响范围。
 
 ## 安全验证
 
 ```shell
-bash -n init-once.sh start.sh stop.sh update.sh compose-business.inc
+bash -n init-once.sh pull.sh save.sh start.sh stop.sh update.sh compose-business.inc image-bundle.inc
 bash -n config/generate-ssl.sh config/generate_key.sh
 docker compose --env-file .env.example -f docker-compose.yml config
 docker compose --env-file .env.example -f docker-compose.yml -f business.d/g2rain-agent.yml -f business.d/g2rain-knowledge.yml config

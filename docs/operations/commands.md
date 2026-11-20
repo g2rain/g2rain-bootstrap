@@ -6,26 +6,27 @@
 ./pull.sh
 ./pull.sh --business g2rain-agent --business g2rain-knowledge
 ./pull.sh g2rain-basis
+./pull.sh --force
 ./pull.sh --background
 ```
 
-脚本从当前 Compose 方案提取镜像；末尾可跟 Compose 服务名，仅拉取这些服务的镜像。`ghcr.io` 镜像通过 `ghcr.1ms.run` 拉取后重新标记为原标签，其他 Registry 镜像直接拉取。默认并行数为 4，可通过 `IMAGE_PULL_PARALLEL` 调整。
+脚本从当前 Compose 方案提取镜像；末尾可跟 Compose 服务名，仅拉取这些服务的镜像。每个镜像对应站点上的一个 `.tar.gz`（由 `save.sh` 导出），下载后执行 `docker load`。本地已有同名镜像时默认跳过，`--force` 强制重新下载。默认并行数为 4，可通过 `IMAGE_PULL_PARALLEL` 调整。
 
 优先读取 `.env`，不存在时读取 `.env.example`。`BUSINESS_EXTENSIONS` 决定默认扩展，`--business` 在此基础上追加；拉取与后续启动应使用同一组扩展。
 
 在 `.env` 中配置：
 
 ```shell
-GHCR_MIRROR=ghcr.1ms.run
+IMAGE_BUNDLE_BASE_URL=https://demo.g2rain.com/images
 IMAGE_PULL_PARALLEL=4
 ```
 
-Compose 和 Dockerfile 保留官方镜像引用。启用 Knowledge 时，脚本从合并配置的 `build.args.BASE_IMAGE` 获取 Docling 基础镜像，默认执行等价操作：
+Compose 和 Dockerfile 保留官方镜像引用。启用 Knowledge 时，脚本会准备 Docling 的 `build.args.BASE_IMAGE` 归档（例如 `ghcr.io_docling-project_docling-serve-cpu_v1.29.0.tar.gz`），默认等价于：
 
 ```shell
-docker pull ghcr.1ms.run/docling-project/docling-serve-cpu:v1.29.0
-docker tag ghcr.1ms.run/docling-project/docling-serve-cpu:v1.29.0 \
-  ghcr.io/docling-project/docling-serve-cpu:v1.29.0
+curl -fL https://demo.g2rain.com/images/ghcr.io_docling-project_docling-serve-cpu_v1.29.0.tar.gz \
+  -o /tmp/docling.tar.gz
+docker load -i /tmp/docling.tar.gz
 ```
 
 所有声明 `build` 的服务，其输出镜像均跳过拉取，包括自定义标签的 Docling 修复镜像。`pull.sh` 只准备镜像，不构建镜像、不启动容器；Docling 修复版由后续启动或更新流程构建。
@@ -40,7 +41,18 @@ cat logs/image-pull.pid
 
 后台命令返回表示任务已提交，不代表下载完成；通过日志中的完成或失败信息确认结果。每次后台调用会覆盖上述日志和 PID 文件，应等待当前任务结束后再启动下一次。
 
-前台模式下，业务片段或 Compose 解析失败会终止执行；任一镜像拉取或标签转换失败会返回非零退出码。修正配置或网络问题后可重新运行。`start.sh` 与 `update.sh` 已自动调用本脚本，独立运行适用于提前准备镜像。
+前台模式下，业务片段或 Compose 解析失败会终止执行；任一归档下载或 `docker load` 失败会返回非零退出码。修正配置或网络问题后可重新运行。`start.sh` 与 `update.sh` 已自动调用本脚本，独立运行适用于提前准备镜像。
+
+## 导出镜像包
+
+```shell
+./save.sh
+./save.sh --output-dir ./images
+./save.sh --business g2rain-agent --business g2rain-knowledge
+./save.sh g2rain-basis
+```
+
+在已能访问 Registry 的机器上，把当前方案需要的镜像导出为 `.tar.gz`，归档名把镜像引用中的 `/` 与 `:` 换成 `_`。本地缺失时会先 `docker pull`。默认输出目录为 `IMAGE_BUNDLE_DIR`（`./images`）。将生成的文件上传到 `IMAGE_BUNDLE_BASE_URL` 对应目录后，客户机即可用 `pull.sh` 下载加载。
 
 ## 首次准备
 

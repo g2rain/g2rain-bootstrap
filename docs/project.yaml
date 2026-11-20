@@ -3,7 +3,7 @@ project:
   name: g2rain-bootstrap
   family: shared-component
   implementationType: docker-compose-bootstrap
-  description: 基于已发布 GHCR 镜像的 谷雨G2rain智能体平台快速启动与部署编排。
+  description: 基于镜像包站点加载已发布镜像的 谷雨G2rain智能体平台快速启动与部署编排。
   repositoryPath: D:/github/g2rain-bootstrap
   ownership: G2rain platform delivery and operations
   baseline:
@@ -24,6 +24,7 @@ project:
   entrypoints:
     initOnce: ./init-once.sh
     pull: ./pull.sh
+    save: ./save.sh
     start: ./start.sh
     stop: ./stop.sh
     update: ./update.sh

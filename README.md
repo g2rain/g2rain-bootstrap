@@ -10,7 +10,7 @@
 
 > 谷雨G2rain智能体平台，为企业提供智能体应用与平台基础能力。
 
-g2rain-bootstrap 是平台的快速启动与部署入口，基于 Docker Compose 组装基础服务、智能体与知识库应用。G2rain 服务只拉取已经发布的 GHCR 镜像；第三方 Docling 以官方 GHCR 镜像为基础，在本地应用最小兼容修复。
+g2rain-bootstrap 是平台的快速启动与部署入口，基于 Docker Compose 组装基础服务、智能体与知识库应用。G2rain 服务通过镜像包站点加载已发布镜像（Compose 仍引用标准 `ghcr.io/...` 标签）；第三方 Docling 以官方 GHCR 镜像为基础，在本地应用最小兼容修复。
 
 [官网](http://www.g2rain.com) · [工程文档](docs/index.md) · [g2rain-deploy](https://github.com/g2rain/g2rain-deploy) · [中央文档](https://github.com/g2rain/g2rain)
 
@@ -50,7 +50,7 @@ g2rain-bootstrap 是平台的快速启动与部署入口，基于 Docker Compose
 - OpenSSL
 - 最低单请求 Demo：4 核 CPU、16 GB 内存和 40 GB 可用磁盘；其中容器资源上限合计约 11.7 GB
 
-若 GHCR 包需要认证，先执行：
+客户机用 `pull.sh` 从镜像包站点下载，通常无需登录 GHCR。发布机执行 `save.sh` 且需从私有 GHCR 预拉取时：
 
 ```bash
 echo "$GITHUB_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USER --password-stdin
@@ -113,8 +113,9 @@ BUSINESS_EXTENSIONS=g2rain-agent,g2rain-knowledge
 常用运维命令：
 
 ```bash
-./pull.sh                   # 加速拉取并转换为 Compose 需要的标签
+./pull.sh                   # 从镜像包站点下载 .tar.gz 并 docker load
 ./pull.sh --background      # 后台拉取，日志位于 logs/image-pull.log
+./save.sh                   # 导出当前方案镜像为 .tar.gz，供上传到镜像包站点
 ./update.sh                 # 拉取指定镜像版本、重建服务并等待健康检查
 ./stop.sh                   # 停止容器，保留数据
 
@@ -131,9 +132,9 @@ docker compose --env-file .env -f docker-compose.yml \
 
 G2rain 组件默认固定到正式版本，不使用 `latest`，地址均为 `ghcr.io/g2rain/<组件>:<版本>`。当前主编排与业务片段默认使用 `1.0.0`。MySQL、Redis、Nacos、Kafka、Milvus 和 Nginx 使用各自上游发布镜像。
 
-Compose 保留标准镜像地址，不绑定镜像代理。`pull.sh` 会将 `ghcr.io/...` 临时转换为 `ghcr.1ms.run/...` 拉取，随后用 `docker tag` 恢复为 Compose 所需的原标签；非 GHCR 镜像直接从原 Registry 拉取。可通过 `GHCR_MIRROR` 和 `IMAGE_PULL_PARALLEL` 调整加速域名与并行数。
+Compose 保留标准镜像地址。`pull.sh` 从 `IMAGE_BUNDLE_BASE_URL`（默认 `https://demo.g2rain.com/images`）下载与镜像同名规则的 `.tar.gz`，再 `docker load`；本地已有镜像默认跳过。发布侧用 `save.sh` 导出归档并上传到该目录。可通过 `IMAGE_BUNDLE_BASE_URL`、`IMAGE_BUNDLE_DIR`、`IMAGE_PULL_PARALLEL` 调整。
 
-启用 Knowledge 时也会预拉取并重新标记 Docling 官方基础镜像；本地构建的输出镜像按 Compose 的 `build` 声明跳过。脚本支持 `--business` 追加扩展和 `--background` 后台运行，默认并行数为 4。后台进度查看 `logs/image-pull.log`；命令返回仅表示任务已提交。`start.sh`、`update.sh` 已自动调用该脚本。完整参数与失败处理见[镜像拉取说明](docs/operations/commands.md#拉取镜像)。
+启用 Knowledge 时也会准备 Docling 官方基础镜像归档；本地构建的输出镜像按 Compose 的 `build` 声明跳过。脚本支持 `--business` 追加扩展和 `--background` 后台运行，默认并行数为 4。后台进度查看 `logs/image-pull.log`；命令返回仅表示任务已提交。`start.sh`、`update.sh` 已自动调用 `pull.sh`。完整参数与失败处理见[镜像拉取说明](docs/operations/commands.md#拉取镜像)与[导出镜像包](docs/operations/commands.md#导出镜像包)。
 
 Docling 属于公共组件：构建时拉取 `ghcr.io/docling-project/docling-serve-cpu:v1.29.0`，再通过 `docling-serve/fix-opencv.py` 将 GUI OpenCV 替换为同版本 headless 包，避免旧内核环境加载 Qt 失败。这个派生镜像只在本机生成，不要求 G2rain 另行发布。
 
@@ -166,7 +167,7 @@ Milvus 示例业务用户名为 `knowledge_service`。已有 `.env` 若仍使用
 | 对比项 | g2rain-bootstrap | g2rain-deploy |
 | --- | --- | --- |
 | 主要场景 | 已发布镜像的快速启动与部署 | 源码开发、构建与跨模块联调 |
-| G2rain 业务组件 | 拉取 GHCR 发布镜像 | 通过源码构建映射组织构建和更新 |
+| G2rain 业务组件 | 加载已发布镜像包（Compose 仍写 GHCR 标签） | 通过源码构建映射组织构建和更新 |
 | 构建工具 | Docker 构建 Docling 派生镜像 | 业务源码构建还涉及 JDK、Maven 等工具 |
 | Compose | 固定使用 V2 | 维护 V1/V2 编排与选择机制 |
 | 首次准备 | 轻量 `init-once.sh`（.env / SQL 占位符 / SSL；可由 `start.sh` 自动调用） | 提供含源码克隆与构建的 `init-once.sh` |
@@ -264,7 +265,7 @@ HTTPS 自签证书由 `config/generate-ssl.sh` 管理；前端应用 ES256 密�
 语法与编排检查可在启动容器前进行：
 
 ```bash
-for script in pull.sh init-once.sh start.sh stop.sh update.sh config/generate-ssl.sh config/generate_key.sh; do
+for script in pull.sh save.sh init-once.sh start.sh stop.sh update.sh config/generate-ssl.sh config/generate_key.sh; do
   bash -n "$script" || exit 1
 done
 
@@ -281,10 +282,12 @@ docker compose --env-file .env.example -f docker-compose.yml \
 g2rain-bootstrap/
 ├── .env.example              # 部署环境模板
 ├── docker-compose.yml        # 基础服务编排
-├── pull.sh                  # 加速拉取并恢复标准镜像标签
+├── pull.sh                  # 从镜像包站点下载并 docker load
+├── save.sh                  # 导出镜像为 .tar.gz 供上传
 ├── init-once.sh             # 首次准备（.env / SQL 占位符 / SSL）
 ├── start.sh / stop.sh / update.sh
 ├── compose-business.inc      # 业务片段选择与合并
+├── image-bundle.inc          # 镜像归档命名与列表解析
 ├── business.d/               # 默认与可选业务片段
 ├── config/
 │   ├── mysql/                # 数据库初始化 SQL 与配置
@@ -320,7 +323,7 @@ g2rain-bootstrap/
 | --- | --- |
 | 首次运行后直接退出 | 检查是否刚生成 `.env`；完成配置后再次执行 `./init-once.sh` 或 `./start.sh`。 |
 | 应用入口地址仍是占位符 | 确认已跑过 `init-once.sh`，且 MySQL 数据卷在替换后才首次初始化；已有数据需清卷后重装。 |
-| 镜像拉取失败 | 核对 GHCR 访问权限、网络及镜像标签；私有包需要正确登录。 |
+| 镜像拉取失败 | 核对 `IMAGE_BUNDLE_BASE_URL`、网络、归档是否已由 `save.sh` 上传，以及镜像标签是否一致。 |
 | 启动等待未完成 | 用完整编排组合查看 `ps` 和日志，检查中间件健康、端口冲突及磁盘、内存。 |
 | 修改密码后服务连不上 | 同步核对 `.env`、Redis 与 Nacos 内各服务配置，已有数据不会自动更新凭据。 |
 | MySQL 初始化 SQL 未重新执行 | 初始化仅作用于空数据目录；已有数据库应使用受控迁移。 |
@@ -328,7 +331,7 @@ g2rain-bootstrap/
 | Milvus 不健康 | 检查认证、持久化目录权限、集合初始化及就绪标记；已有同名集合不会自动补列。 |
 | 浏览器提示证书不受信任 | 默认自签证书用于验证；正式域名使用受信任证书，并核对主机名。 |
 | 可选扩展未启动或残留 | 核对 `BUSINESS_EXTENSIONS` 与 `--business`；`stop`/`update` 须与启动时扩展集合一致。 |
-| CMS 镜像拉取失败 | 确认 `g2rain-cms` / `g2rain-cms-app` 标签在 GHCR 可拉取后再启用该扩展。 |
+| CMS 镜像拉取失败 | 确认站点已上传对应 `g2rain-cms` / `g2rain-cms-app` 归档后再启用该扩展。 |
 
 ## 工程文档
 
