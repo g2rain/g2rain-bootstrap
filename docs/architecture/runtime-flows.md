@@ -14,7 +14,7 @@
 1. 切换到仓库根目录；若需要首次准备则调用 `init-once.sh`。
 2. 加载 `.env`。
 3. 按 `BUSINESS_EXTENSIONS` 与 `--business` 解析业务片段，合并主 Compose。
-4. 调用 `pull.sh`：从 `IMAGE_BUNDLE_BASE_URL` 下载对应 `.tar.gz` 并 `docker load`。
+4. 调用 `pull.sh`：从官网 `https://www.g2rain.com/g2rain-downloads/docker` 下载对应 `.tar.gz` 并 `docker load`。
 5. 执行 `docker compose up -d --build --wait`。
 6. 打印访客入口：`${PLATFORM_BASE_URL}/chat/`。
 

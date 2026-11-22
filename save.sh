@@ -17,7 +17,7 @@ usage() {
 - 归档名：把镜像引用中的 / 与 : 换成 _，后缀 .tar.gz。
 
 参数：
-  --output-dir <目录>  输出目录，默认 IMAGE_BUNDLE_DIR 或 ./images
+  --output-dir <目录>  输出目录，默认 ./images
   --business <名>      追加业务扩展，可重复指定
   [服务名]...          仅导出这些 Compose 服务的镜像；省略则导出整栈
 EOF
@@ -70,7 +70,7 @@ if ((${#G2RAIN_REMAINING_ARGS[@]} > 0)); then
   done
 fi
 
-output_dir="${output_dir:-${IMAGE_BUNDLE_DIR:-./images}}"
+output_dir="${output_dir:-./images}"
 
 if ! image_list="$(g2rain_list_images "${services[@]+"${services[@]}"}")"; then
   echo "解析 Compose 镜像列表失败" >&2
@@ -116,4 +116,4 @@ for image in "${images[@]}"; do
 done
 
 echo "镜像已导出到: $output_dir"
-echo "上传示例: scp ${output_dir%/}/*.tar.gz user@demo.g2rain.com:/var/www/images/"
+echo "上传示例: rsync -avP ${output_dir%/}/*.tar.gz root@host:/data/g2rain-downloads/docker/"

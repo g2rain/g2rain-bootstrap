@@ -10,21 +10,14 @@
 ./pull.sh --background
 ```
 
-脚本从当前 Compose 方案提取镜像；末尾可跟 Compose 服务名，仅拉取这些服务的镜像。每个镜像对应站点上的一个 `.tar.gz`（由 `save.sh` 导出），下载后执行 `docker load`。本地已有同名镜像时默认跳过，`--force` 强制重新下载。默认并行数为 4，可通过 `IMAGE_PULL_PARALLEL` 调整。
+脚本从当前 Compose 方案提取镜像；末尾可跟 Compose 服务名，仅拉取这些服务的镜像。每个镜像对应官网上的一个 `.tar.gz`（由 `save.sh` 导出），固定从 `https://www.g2rain.com/g2rain-downloads/docker` 下载后执行 `docker load`。说明页见 [镜像下载](https://www.g2rain.com/platform/image-downloads.html)。本地已有同名镜像时默认跳过，`--force` 强制重新下载。并行数为 4，不依赖 `.env` 配置下载地址。
 
-优先读取 `.env`，不存在时读取 `.env.example`。`BUSINESS_EXTENSIONS` 决定默认扩展，`--business` 在此基础上追加；拉取与后续启动应使用同一组扩展。
+优先读取 `.env`，不存在时读取 `.env.example`（仅用于 Compose 变量与 `BUSINESS_EXTENSIONS`）。`--business` 在默认扩展基础上追加；拉取与后续启动应使用同一组扩展。
 
-在 `.env` 中配置：
-
-```shell
-IMAGE_BUNDLE_BASE_URL=https://demo.g2rain.com/images
-IMAGE_PULL_PARALLEL=4
-```
-
-Compose 和 Dockerfile 保留官方镜像引用。启用 Knowledge 时，脚本会准备 Docling 的 `build.args.BASE_IMAGE` 归档（例如 `ghcr.io_docling-project_docling-serve-cpu_v1.29.0.tar.gz`），默认等价于：
+Compose 和 Dockerfile 保留官方镜像引用，本脚本不改编排。启用 Knowledge 时，脚本会准备 Docling 的 `build.args.BASE_IMAGE` 归档，默认等价于：
 
 ```shell
-curl -fL https://demo.g2rain.com/images/ghcr.io_docling-project_docling-serve-cpu_v1.29.0.tar.gz \
+curl -fL https://www.g2rain.com/g2rain-downloads/docker/ghcr.io_docling-project_docling-serve-cpu_v1.29.0.tar.gz \
   -o /tmp/docling.tar.gz
 docker load -i /tmp/docling.tar.gz
 ```
@@ -52,7 +45,7 @@ cat logs/image-pull.pid
 ./save.sh g2rain-basis
 ```
 
-在已能访问 Registry 的机器上，把当前方案需要的镜像导出为 `.tar.gz`，归档名把镜像引用中的 `/` 与 `:` 换成 `_`。本地缺失时会先 `docker pull`。默认输出目录为 `IMAGE_BUNDLE_DIR`（`./images`）。将生成的文件上传到 `IMAGE_BUNDLE_BASE_URL` 对应目录后，客户机即可用 `pull.sh` 下载加载。
+在已能访问 Registry 的机器上，把当前方案需要的镜像导出为 `.tar.gz`，归档名把镜像引用中的 `/` 与 `:` 换成 `_`。本地缺失时会先 `docker pull`。默认输出目录为 `./images`（可用 `--output-dir` 覆盖）。将生成的文件上传到官网目录（如 `/data/g2rain-downloads/docker`，对应 `https://www.g2rain.com/g2rain-downloads/docker`）后，客户机即可用 `pull.sh` 下载加载。
 
 ## 首次准备
 

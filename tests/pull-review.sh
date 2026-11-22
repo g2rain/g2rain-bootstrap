@@ -36,13 +36,13 @@ curl() {
 }
 export -f docker curl
 output="$(bash ./pull.sh)"
-[[ "$output" == *'MOCK curl'*'https://demo.g2rain.com/images/ghcr.io_docling-project_docling-serve-cpu_v1.29.0.tar.gz'* ]]
-[[ "$output" == *'MOCK curl'*'https://demo.g2rain.com/images/redis_7-alpine.tar.gz'* ]]
+[[ "$output" == *'MOCK curl'*'https://www.g2rain.com/g2rain-downloads/docker/ghcr.io_docling-project_docling-serve-cpu_v1.29.0.tar.gz'* ]]
+[[ "$output" == *'MOCK curl'*'https://www.g2rain.com/g2rain-downloads/docker/redis_7-alpine.tar.gz'* ]]
 [[ "$output" == *'MOCK load -i'* ]]
 [[ "$output" != *'local/custom-docling:test'* ]]
 filtered="$(bash ./pull.sh app)"
 [[ "$filtered" == *'仅拉取指定服务镜像: app'* ]]
-[[ "$filtered" == *'MOCK curl'*'https://demo.g2rain.com/images/ghcr.io_g2rain_example_1.tar.gz'* ]]
+[[ "$filtered" == *'MOCK curl'*'https://www.g2rain.com/g2rain-downloads/docker/ghcr.io_g2rain_example_1.tar.gz'* ]]
 [[ "$filtered" != *'redis_7-alpine.tar.gz'* ]]
 [[ "$filtered" != *'docling-serve-cpu'* ]]
 skipped="$(MOCK_HAVE_IMAGE=1 bash ./pull.sh redis)"

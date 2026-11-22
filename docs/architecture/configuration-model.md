@@ -58,7 +58,7 @@ docker compose --env-file .env \
 
 `start.sh` / `update.sh` 先调用 `pull.sh`，再执行 `up -d --build --wait`（更新时另带 `--remove-orphans`）。拉取脚本按合并后的 `build` 声明跳过本地构建输出镜像，并预准备 Docling 的 `build.args.BASE_IMAGE`；派生镜像在本机构建。
 
-`IMAGE_BUNDLE_BASE_URL` 默认 `https://demo.g2rain.com/images`，`IMAGE_PULL_PARALLEL` 默认 `4`，仅影响 `pull.sh`：按归档名下载 `.tar.gz` 后 `docker load`。`save.sh` 用同一套镜像列表导出归档；本地缺镜像时直接 `docker pull`。Compose 引用保持不变。详细操作见[拉取镜像](../operations/commands.md#拉取镜像)与[导出镜像包](../operations/commands.md#导出镜像包)。
+`pull.sh` 固定从 `https://www.g2rain.com/g2rain-downloads/docker` 按归档名下载 `.tar.gz` 后 `docker load`，不通过 `.env` 配置下载地址。`save.sh` 用同一套镜像列表导出归档；本地缺镜像时直接 `docker pull`。Compose 引用保持不变。详细操作见[拉取镜像](../operations/commands.md#拉取镜像)与[导出镜像包](../operations/commands.md#导出镜像包)。
 
 ## 证书与应用密钥
 

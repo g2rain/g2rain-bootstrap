@@ -132,7 +132,7 @@ docker compose --env-file .env -f docker-compose.yml \
 
 G2rain 组件默认固定到正式版本，不使用 `latest`，地址均为 `ghcr.io/g2rain/<组件>:<版本>`。当前主编排与业务片段默认使用 `1.0.0`。MySQL、Redis、Nacos、Kafka、Milvus 和 Nginx 使用各自上游发布镜像。
 
-Compose 保留标准镜像地址。`pull.sh` 从 `IMAGE_BUNDLE_BASE_URL`（默认 `https://demo.g2rain.com/images`）下载与镜像同名规则的 `.tar.gz`，再 `docker load`；本地已有镜像默认跳过。发布侧用 `save.sh` 导出归档并上传到该目录。可通过 `IMAGE_BUNDLE_BASE_URL`、`IMAGE_BUNDLE_DIR`、`IMAGE_PULL_PARALLEL` 调整。
+Compose 保留标准镜像地址。`pull.sh` 固定从官网 `https://www.g2rain.com/g2rain-downloads/docker` 下载与镜像同名规则的 `.tar.gz`，再 `docker load`（说明页：[镜像下载](https://www.g2rain.com/platform/image-downloads.html)）；本地已有镜像默认跳过。发布侧用 `save.sh` 导出归档并上传到对应目录。下载地址写在 `pull.sh` 内，不依赖 `.env`。
 
 启用 Knowledge 时也会准备 Docling 官方基础镜像归档；本地构建的输出镜像按 Compose 的 `build` 声明跳过。脚本支持 `--business` 追加扩展和 `--background` 后台运行，默认并行数为 4。后台进度查看 `logs/image-pull.log`；命令返回仅表示任务已提交。`start.sh`、`update.sh` 已自动调用 `pull.sh`。完整参数与失败处理见[镜像拉取说明](docs/operations/commands.md#拉取镜像)与[导出镜像包](docs/operations/commands.md#导出镜像包)。
 
@@ -323,7 +323,7 @@ g2rain-bootstrap/
 | --- | --- |
 | 首次运行后直接退出 | 检查是否刚生成 `.env`；完成配置后再次执行 `./init-once.sh` 或 `./start.sh`。 |
 | 应用入口地址仍是占位符 | 确认已跑过 `init-once.sh`，且 MySQL 数据卷在替换后才首次初始化；已有数据需清卷后重装。 |
-| 镜像拉取失败 | 核对 `IMAGE_BUNDLE_BASE_URL`、网络、归档是否已由 `save.sh` 上传，以及镜像标签是否一致。 |
+| 镜像拉取失败 | 核对官网 `g2rain-downloads/docker` 是否可访问、网络、归档是否已由 `save.sh` 上传，以及镜像标签是否一致。 |
 | 启动等待未完成 | 用完整编排组合查看 `ps` 和日志，检查中间件健康、端口冲突及磁盘、内存。 |
 | 修改密码后服务连不上 | 同步核对 `.env`、Redis 与 Nacos 内各服务配置，已有数据不会自动更新凭据。 |
 | MySQL 初始化 SQL 未重新执行 | 初始化仅作用于空数据目录；已有数据库应使用受控迁移。 |

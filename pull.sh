@@ -11,11 +11,12 @@ usage() {
   cat <<'EOF'
 用法: ./pull.sh [--background] [--force] [--business <名>]... [服务名]...
 
-从镜像包站点下载 .tar.gz 并 docker load：
+从官网镜像包目录下载 .tar.gz 并 docker load：
 - 按 Compose 合并结果提取镜像（构建型输出跳过；Docling BASE_IMAGE 会准备）；
-- 默认地址 IMAGE_BUNDLE_BASE_URL（默认 https://demo.g2rain.com/images）；
+- 固定从 https://www.g2rain.com/g2rain-downloads/docker 下载（说明页见 /platform/image-downloads.html）；
 - 本地已有同名镜像时跳过，除非指定 --force；
-- 默认最多并行下载 4 个归档。
+- 最多并行下载 4 个归档。
+- Compose 中的 image 引用保持不变，本脚本只负责准备本地镜像。
 
 参数：
   --background       后台拉取，日志写入 logs/image-pull.log
@@ -78,16 +79,12 @@ if ((${#G2RAIN_REMAINING_ARGS[@]} > 0)); then
   done
 fi
 
-base_url="${IMAGE_BUNDLE_BASE_URL:-https://demo.g2rain.com/images}"
-base_url="${base_url%/}"
-parallel="${IMAGE_PULL_PARALLEL:-4}"
-if ! [[ "$parallel" =~ ^[1-9][0-9]*$ ]]; then
-  echo "IMAGE_PULL_PARALLEL 必须是正整数" >&2
-  exit 1
-fi
+# 官网直链目录；说明页：https://www.g2rain.com/platform/image-downloads.html
+base_url="https://www.g2rain.com/g2rain-downloads/docker"
+parallel=4
 
 if ! command -v curl >/dev/null 2>&1; then
-  echo "需要 curl 才能从镜像包站点下载" >&2
+  echo "需要 curl 才能从官网下载镜像包" >&2
   exit 1
 fi
 
