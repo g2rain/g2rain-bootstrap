@@ -37,7 +37,8 @@ g2rain_compose_cmd_init() {
   done <<< "$paths"
 }
 
-# 从合并后的 Compose 配置提取可准备镜像；构建型输出跳过，Docling BASE_IMAGE 保留。
+# 从合并后的 Compose 配置提取可准备的 G2rain 镜像（仅 ghcr.io/g2rain/*）。
+# 构建型输出、第三方镜像（MySQL/Redis/Nacos/Kafka/Nginx/Milvus/Docling 等）一律跳过。
 # 参数：可选服务名列表；无参数则取整栈。
 g2rain_list_images() {
   local services=("$@")
@@ -61,19 +62,20 @@ g2rain_list_images() {
     function wanted() {
       return !filter_on || (service in want)
     }
+    function is_g2rain(img) {
+      return img ~ /^ghcr\.io\/g2rain\//
+    }
     function emit() {
-      if (service != "" && wanted() && !build && image != "") print image
-      if (service == "docling-serve" && wanted() && build && base != "") print base
+      if (service != "" && wanted() && !build && image != "" && is_g2rain(image)) print image
     }
     /^services:$/ { inside=1; next }
     inside && /^[^ ]/ { emit(); service=""; inside=0 }
     inside && /^  [^ ]/ {
       emit(); service=$1; sub(/:$/, "", service)
-      build=0; image=""; base=""; next
+      build=0; image=""; next
     }
     inside && /^    build:/ { build=1 }
     inside && /^    image:/ { image=$2 }
-    inside && /^        BASE_IMAGE:/ { base=$2 }
     END { emit() }
   ' <<< "$resolved_config" | sort -u
 }

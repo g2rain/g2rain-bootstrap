@@ -15,6 +15,7 @@ usage() {
   ./start.sh --business g2rain-department --business g2rain-member
 
 首次准备（.env / SQL 占位符 / SSL）由 ./init-once.sh 完成；缺少完成标记时本脚本会自动调用。
+不拉取镜像；启动前请先手动执行 ./pull.sh。
 推荐组合见 .env.example 与 business.d/README.md。
 EOF
 }
@@ -67,6 +68,5 @@ while IFS= read -r file; do
   compose+=(-f "$file")
 done < <(g2rain_business_yml_paths)
 
-./pull.sh "$@"
 "${compose[@]}" up -d --build --wait
 echo "G2Rain 已启动：${PLATFORM_BASE_URL:-https://${PLATFORM_HOST:-localhost}:${PLATFORM_PORT:-10443}}/chat/"

@@ -11,8 +11,8 @@ usage() {
   cat <<'EOF'
 用法: ./save.sh [--output-dir <目录>] [--business <名>]... [服务名]...
 
-将当前部署方案需要的镜像导出为 .tar.gz，供上传到镜像包站点：
-- 按 Compose 合并结果提取镜像（构建型输出跳过；Docling BASE_IMAGE 会导出）；
+将当前部署方案需要的 G2rain 镜像导出为 .tar.gz，供上传到镜像包站点：
+- 仅导出 ghcr.io/g2rain/*；第三方镜像与构建型输出不导出；
 - 本地缺失时先 docker pull，再 docker save | gzip；
 - 归档名：把镜像引用中的 / 与 : 换成 _，后缀 .tar.gz。
 

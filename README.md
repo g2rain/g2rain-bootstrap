@@ -78,6 +78,7 @@ cp .env.example .env
 # .env 中清空业务扩展
 BUSINESS_EXTENSIONS=
 
+./pull.sh
 ./start.sh
 ```
 
@@ -88,9 +89,11 @@ BUSINESS_EXTENSIONS=
 ```bash
 # 方式一：写入 .env（.env.example 已预填该组合）
 BUSINESS_EXTENSIONS=g2rain-agent,g2rain-knowledge
+./pull.sh
 ./start.sh
 
 # 方式二：命令行追加（.env 中 BUSINESS_EXTENSIONS 为空时）
+./pull.sh --business g2rain-agent --business g2rain-knowledge
 ./start.sh --business g2rain-agent --business g2rain-knowledge
 ```
 
@@ -101,12 +104,14 @@ BUSINESS_EXTENSIONS=g2rain-agent,g2rain-knowledge
 | 访客对话 | `https://<PLATFORM_HOST>:10443/chat/` |
 | 管理端 | `https://<PLATFORM_HOST>:10443/admin/` |
 
-首次使用自签名证书时，浏览器会显示安全提示。智能客服启动会拉取相关镜像并构建 Docling 派生镜像，再等待健康检查。
+首次使用自签名证书时，浏览器会显示安全提示。请先手动 `./pull.sh` 准备镜像；启动时再构建 Docling 派生镜像并等待健康检查。
 
 按需追加其他扩展：
 
 ```bash
+./pull.sh --business g2rain-department --business g2rain-member
 ./start.sh --business g2rain-department --business g2rain-member
+./pull.sh --business g2rain-cms
 ./start.sh --business g2rain-cms
 ```
 
@@ -132,9 +137,7 @@ docker compose --env-file .env -f docker-compose.yml \
 
 G2rain 组件默认固定到正式版本，不使用 `latest`，地址均为 `ghcr.io/g2rain/<组件>:<版本>`。当前主编排与业务片段默认使用 `1.0.0`。MySQL、Redis、Nacos、Kafka、Milvus 和 Nginx 使用各自上游发布镜像。
 
-Compose 保留标准镜像地址。`pull.sh` 固定从官网 `https://www.g2rain.com/g2rain-downloads/docker` 下载与镜像同名规则的 `.tar.gz`，再 `docker load`（说明页：[镜像下载](https://www.g2rain.com/platform/image-downloads.html)）；本地已有镜像默认跳过。发布侧用 `save.sh` 导出归档并上传到对应目录。下载地址写在 `pull.sh` 内，不依赖 `.env`。
-
-启用 Knowledge 时也会准备 Docling 官方基础镜像归档；本地构建的输出镜像按 Compose 的 `build` 声明跳过。脚本支持 `--business` 追加扩展和 `--background` 后台运行，默认并行数为 4。后台进度查看 `logs/image-pull.log`；命令返回仅表示任务已提交。`start.sh`、`update.sh` 已自动调用 `pull.sh`。完整参数与失败处理见[镜像拉取说明](docs/operations/commands.md#拉取镜像)与[导出镜像包](docs/operations/commands.md#导出镜像包)。
+Compose 保留标准镜像地址。`pull.sh` / `save.sh` **只处理 `ghcr.io/g2rain/*`**；MySQL、Redis、Nacos、Kafka、Nginx、Milvus、Docling 等第三方镜像不打包、不从官网下载，启动或构建时由 Docker 按需拉取。`pull.sh` 固定从 `https://www.g2rain.com/g2rain-downloads/docker` 下载 G2rain 归档并 `docker load`（说明页：[镜像下载](https://www.g2rain.com/platform/image-downloads.html)）；本地已有则跳过。下载地址写在 `pull.sh` 内，不依赖 `.env`。脚本支持 `--business` 与 `--background`；仅客户手动执行，`start.sh` / `update.sh` 不会调用。详见[镜像拉取说明](docs/operations/commands.md#拉取镜像)与[导出镜像包](docs/operations/commands.md#导出镜像包)。
 
 Docling 属于公共组件：构建时拉取 `ghcr.io/docling-project/docling-serve-cpu:v1.29.0`，再通过 `docling-serve/fix-opencv.py` 将 GUI OpenCV 替换为同版本 headless 包，避免旧内核环境加载 Qt 失败。这个派生镜像只在本机生成，不要求 G2rain 另行发布。
 
@@ -196,11 +199,13 @@ Admin Shell 属于基础编排，Chat Shell 随 Agent 片段加载。Knowledge �
 flowchart TD
   O[部署人员] --> I0[init-once.sh]
   I0 --> E[.env / SQL 占位符 / HTTPS 证书]
+  O --> P[pull.sh 手动下载镜像包]
   O --> S[start.sh]
   S --> I0
   S --> C[基础编排 + 所选业务扩展]
-  C --> I[拉取发布镜像并构建 Docling]
-  I --> H[启动服务并等待健康检查]
+  P --> C
+  C --> I[构建 Docling 并启动]
+  I --> H[等待健康检查]
   O --> X[可选 --business / BUSINESS_EXTENSIONS]
   X --> C
   V[访问者] --> N[Nginx HTTPS 入口]
@@ -244,8 +249,9 @@ docker compose --env-file .env -f docker-compose.yml \
 | 命令 | 行为 |
 | --- | --- |
 | `./init-once.sh [--host HOST] [--port PORT] [--force]` | 首次准备：确保 `.env`、替换 `g2rain-basis.sql` 平台地址占位符、按需生成自签证书并写入完成标记。 |
-| `./start.sh [--business <名>]...` | 需要时自动调用 `init-once.sh`；按所选扩展拉取镜像、构建 Docling 并等待服务健康。 |
-| `./update.sh [--business <名>]... [服务名]...` | 拉取并 `--force-recreate` 重建（配置变更也会重启）；可指定服务名做局部更新。 |
+| `./pull.sh [--business <名>]... [服务名]...` | 客户手动从官网下载镜像包并 `docker load`；`start`/`update` 不会调用。 |
+| `./start.sh [--business <名>]...` | 需要时自动调用 `init-once.sh`；按所选扩展构建 Docling 并等待服务健康（不拉镜像）。 |
+| `./update.sh [--business <名>]... [服务名]...` | `--force-recreate` 重建（配置变更也会重启）；可指定服务名做局部更新（不拉镜像）。 |
 | `./stop.sh [--business <名>]...` | 对当前扩展集合执行 `down`，停止并移除容器及相关网络，保留持久化卷与绑定目录。 |
 
 查看完整栈日志时使用相同编排组合，末尾可指定 Compose 服务名：
@@ -282,7 +288,7 @@ docker compose --env-file .env.example -f docker-compose.yml \
 g2rain-bootstrap/
 ├── .env.example              # 部署环境模板
 ├── docker-compose.yml        # 基础服务编排
-├── pull.sh                  # 从镜像包站点下载并 docker load
+├── pull.sh                  # 客户手动从官网下载并 docker load
 ├── save.sh                  # 导出镜像为 .tar.gz 供上传
 ├── init-once.sh             # 首次准备（.env / SQL 占位符 / SSL）
 ├── start.sh / stop.sh / update.sh

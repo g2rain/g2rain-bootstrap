@@ -9,19 +9,23 @@
 
 可独立执行 `./init-once.sh`；`start.sh` 在缺少完成标记、仍有 SQL 占位符或缺少证书时也会自动调用。
 
+## 拉取镜像（手动）
+
+客户在启动或更新前手动执行 `./pull.sh`：仅下载 `ghcr.io/g2rain/*` 对应 `.tar.gz` 并 `docker load`。第三方镜像不由此脚本准备。`start.sh` / `update.sh` 不会自动调用。
+
 ## 启动
 
 1. 切换到仓库根目录；若需要首次准备则调用 `init-once.sh`。
-2. 加载 `.env`。
-3. 按 `BUSINESS_EXTENSIONS` 与 `--business` 解析业务片段，合并主 Compose。
-4. 调用 `pull.sh`：从官网 `https://www.g2rain.com/g2rain-downloads/docker` 下载对应 `.tar.gz` 并 `docker load`。
+2. 确认已手动执行 `./pull.sh`（或本地已有所需镜像）。
+3. 加载 `.env`。
+4. 按 `BUSINESS_EXTENSIONS` 与 `--business` 解析业务片段，合并主 Compose。
 5. 执行 `docker compose up -d --build --wait`。
 6. 打印访客入口：`${PLATFORM_BASE_URL}/chat/`。
 
 ## 更新
 
 1. 使用与启动相同的 Compose 合并参数。
-2. 再次调用 `pull.sh`。
+2. 若镜像有更新，先手动执行 `./pull.sh`。
 3. 执行 `up -d --build --remove-orphans --wait`。
 
 更新前应备份 `data/`、当前 `.env` 与镜像 digest；升级后检查健康状态与 `/chat/` 冒烟流程。未列入当前扩展集合的可选服务会被 `--remove-orphans` 移除。

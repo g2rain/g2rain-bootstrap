@@ -56,9 +56,9 @@ docker compose --env-file .env \
 - `DOCLING_IMAGE`：本机派生标签，默认 `g2rain-bootstrap/docling-serve-cpu:v1.29.0`
 - `docling-serve/fix-opencv.py`：构建阶段替换 OpenCV
 
-`start.sh` / `update.sh` 先调用 `pull.sh`，再执行 `up -d --build --wait`（更新时另带 `--remove-orphans`）。拉取脚本按合并后的 `build` 声明跳过本地构建输出镜像，并预准备 Docling 的 `build.args.BASE_IMAGE`；派生镜像在本机构建。
+`start.sh` / `update.sh` 执行 `up -d --build --wait`（更新时另带 `--remove-orphans`），不调用 `pull.sh`。客户须事先手动执行 `pull.sh` 准备 **G2rain** 镜像；第三方中间件与 Docling 基础镜像由 Docker/构建按需拉取。派生 Docling 镜像在本机构建。
 
-`pull.sh` 固定从 `https://www.g2rain.com/g2rain-downloads/docker` 按归档名下载 `.tar.gz` 后 `docker load`，不通过 `.env` 配置下载地址。`save.sh` 用同一套镜像列表导出归档；本地缺镜像时直接 `docker pull`。Compose 引用保持不变。详细操作见[拉取镜像](../operations/commands.md#拉取镜像)与[导出镜像包](../operations/commands.md#导出镜像包)。
+`pull.sh` / `save.sh` 只处理 `ghcr.io/g2rain/*`，固定从 `https://www.g2rain.com/g2rain-downloads/docker` 下载或导出对应 `.tar.gz`。Compose 引用保持不变。详细操作见[拉取镜像](../operations/commands.md#拉取镜像)与[导出镜像包](../operations/commands.md#导出镜像包)。
 
 ## 证书与应用密钥
 

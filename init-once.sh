@@ -44,7 +44,7 @@ usage() {
     __PLATFORM_HOST__、__PLATFORM_PORT__（须在空 MySQL 数据卷首次初始化前完成）。
   - 若缺少 ssl/server.crt 或 ssl/server.key，调用 config/generate-ssl.sh。
   - 成功结束后写入 .g2rain-bootstrap-init.done；失败不写标记，可修正后重跑。
-  - 不拉取镜像、不启动容器；完成后执行 ./start.sh。
+  - 不拉取镜像、不启动容器；完成后先 ./pull.sh，再 ./start.sh。
 
 选项:
   --host / --port   创建或已有 .env 时可写入平台地址（同时同步 PLATFORM_BASE_URL）。

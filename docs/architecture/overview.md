@@ -5,8 +5,9 @@
 ```text
 运维人员
   -> init-once.sh：.env、g2rain-basis.sql 平台地址占位符、自签证书（可独立或由 start.sh 调用）
-  -> start.sh：检查首次准备、拉取镜像、合并业务片段、启动并等待健康
-  -> update.sh：再次拉取可拉取镜像、重建服务并清理孤儿容器
+  -> pull.sh：客户手动从官网下载镜像包并 docker load（start/update 不自动调用）
+  -> start.sh：检查首次准备、合并业务片段、启动并等待健康
+  -> update.sh：重建服务并清理孤儿容器
   -> stop.sh：docker compose down，保留命名卷与绑定数据目录
 
 配置输入

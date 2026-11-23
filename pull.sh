@@ -11,12 +11,13 @@ usage() {
   cat <<'EOF'
 用法: ./pull.sh [--background] [--force] [--business <名>]... [服务名]...
 
-从官网镜像包目录下载 .tar.gz 并 docker load：
-- 按 Compose 合并结果提取镜像（构建型输出跳过；Docling BASE_IMAGE 会准备）；
-- 固定从 https://www.g2rain.com/g2rain-downloads/docker 下载（说明页见 /platform/image-downloads.html）；
-- 本地已有同名镜像时跳过，除非指定 --force；
-- 最多并行下载 4 个归档。
-- Compose 中的 image 引用保持不变，本脚本只负责准备本地镜像。
+由客户手动执行：从官网镜像包目录下载 .tar.gz 并 docker load。
+start.sh / update.sh 不会自动调用本脚本。
+
+- 仅处理 ghcr.io/g2rain/*；MySQL/Redis/Nacos/Kafka/Nginx/Milvus/Docling 等第三方镜像不下载；
+- 构建型输出跳过；固定从 https://www.g2rain.com/g2rain-downloads/docker 下载；
+- 本地已有同名镜像时跳过，除非指定 --force；最多并行 4 个归档。
+- Compose 中的 image 引用保持不变，本脚本只负责准备 G2rain 本地镜像。
 
 参数：
   --background       后台拉取，日志写入 logs/image-pull.log

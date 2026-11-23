@@ -36,20 +36,21 @@ curl() {
 }
 export -f docker curl
 output="$(bash ./pull.sh)"
-[[ "$output" == *'MOCK curl'*'https://www.g2rain.com/g2rain-downloads/docker/ghcr.io_docling-project_docling-serve-cpu_v1.29.0.tar.gz'* ]]
-[[ "$output" == *'MOCK curl'*'https://www.g2rain.com/g2rain-downloads/docker/redis_7-alpine.tar.gz'* ]]
+[[ "$output" == *'MOCK curl'*'https://www.g2rain.com/g2rain-downloads/docker/ghcr.io_g2rain_example_1.tar.gz'* ]]
 [[ "$output" == *'MOCK load -i'* ]]
+[[ "$output" != *'redis_7-alpine.tar.gz'* ]]
+[[ "$output" != *'docling-serve-cpu'* ]]
 [[ "$output" != *'local/custom-docling:test'* ]]
 filtered="$(bash ./pull.sh app)"
 [[ "$filtered" == *'仅拉取指定服务镜像: app'* ]]
 [[ "$filtered" == *'MOCK curl'*'https://www.g2rain.com/g2rain-downloads/docker/ghcr.io_g2rain_example_1.tar.gz'* ]]
 [[ "$filtered" != *'redis_7-alpine.tar.gz'* ]]
-[[ "$filtered" != *'docling-serve-cpu'* ]]
-skipped="$(MOCK_HAVE_IMAGE=1 bash ./pull.sh redis)"
-[[ "$skipped" == *'已存在，跳过: redis:7-alpine'* ]]
+skipped="$(MOCK_HAVE_IMAGE=1 bash ./pull.sh app)"
+[[ "$skipped" == *'已存在，跳过: ghcr.io/g2rain/example:1'* ]]
 [[ "$skipped" != *'MOCK curl'* ]]
-forced="$(MOCK_HAVE_IMAGE=1 bash ./pull.sh --force redis)"
-[[ "$forced" == *'MOCK curl'*'redis_7-alpine.tar.gz'* ]]
+forced="$(MOCK_HAVE_IMAGE=1 bash ./pull.sh --force app)"
+[[ "$forced" == *'MOCK curl'*'ghcr.io_g2rain_example_1.tar.gz'* ]]
+if bash ./pull.sh redis; then exit 1; fi
 if bash ./pull.sh nonexistent-service-review-test; then exit 1; fi
 if MOCK_FAIL=1 bash ./pull.sh; then exit 1; fi
 if bash ./pull.sh --business nonexistent-review-test; then exit 1; fi

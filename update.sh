@@ -11,7 +11,8 @@ usage() {
 
 合并片段选择须与启动时一致。
 读取 BUSINESS_EXTENSIONS；可用 --business 追加扩展。
-可选传入 Compose 服务名（如 g2rain-basis），仅拉取/重建这些服务；省略则更新整栈。
+可选传入 Compose 服务名（如 g2rain-basis），仅重建这些服务；省略则更新整栈。
+镜像需事先手动执行 ./pull.sh 准备。
 
 始终使用 --force-recreate，确保配置变更也会重建容器（不删除本地镜像）。
 
@@ -60,15 +61,6 @@ while IFS= read -r file; do
   [[ -n "$file" ]] || continue
   compose+=(-f "$file")
 done < <(g2rain_business_yml_paths)
-
-pull_args=()
-for name in "${G2RAIN_BUSINESS_EXTRA[@]+"${G2RAIN_BUSINESS_EXTRA[@]}"}"; do
-  pull_args+=(--business "$name")
-done
-if ((${#services[@]} > 0)); then
-  pull_args+=("${services[@]}")
-fi
-./pull.sh "${pull_args[@]+"${pull_args[@]}"}"
 
 up_args=(up -d --build --force-recreate --wait)
 if ((${#services[@]} > 0)); then

@@ -20,8 +20,8 @@ echo "$GITHUB_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USER --password-stdin
 1. 复制并审查 `.env`（可用 `./init-once.sh --host <主机> --port <端口>` 写入平台地址）。
 2. 将 `PLATFORM_HOST` / `PLATFORM_PORT` 写入 `config/mysql/g2rain-basis.sql` 中的占位符（须在空 MySQL 数据卷前完成）。
 3. 缺失证书时生成自签证书，并写入 `.g2rain-bootstrap-init.done`。
-4. 可先执行 `./pull.sh --background` 在后台准备镜像。
-5. 执行 `./start.sh` 拉取镜像并启动。
+4. 手动执行 `./pull.sh`（或 `./pull.sh --background`）从官网准备镜像。
+5. 执行 `./start.sh` 启动（不会自动拉取镜像）。
 
 若 `.env` 尚不存在且未传入 `--host`/`--port`，`init-once.sh` 会从模板生成后退出，要求修改后再跑。
 

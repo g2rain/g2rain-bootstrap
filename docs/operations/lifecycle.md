@@ -22,9 +22,17 @@ docker compose --env-file .env \
   config
 ```
 
-再执行 `./start.sh`。需要部门或会员时：
+先手动准备镜像，再启动：
 
 ```shell
+./pull.sh
+./start.sh
+```
+
+需要部门或会员时：
+
+```shell
+./pull.sh --business g2rain-department --business g2rain-member
 ./start.sh --business g2rain-department --business g2rain-member
 ```
 
