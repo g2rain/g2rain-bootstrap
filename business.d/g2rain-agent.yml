@@ -107,6 +107,8 @@ services:
         condition: service_healthy
       nacos:
         condition: service_healthy
+      g2rain-mcp-registry:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "nc -z localhost 8080 || timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8080' || exit 1"]
       interval: 15s
@@ -190,6 +192,8 @@ services:
       redis:
         condition: service_healthy
       nacos:
+        condition: service_healthy
+      g2rain-basis:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "nc -z localhost 8080 || timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/8080' || exit 1"]
